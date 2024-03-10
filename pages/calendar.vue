@@ -16,6 +16,31 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
     }
 });
 
+function dateToPercentOfDay(date: Date) {
+    return (date.getHours() * 60 + date.getMinutes()) / (24 * 60) * 100;
+}
+
+function formatTime(date: Date) {
+    return date.getHours().toString().padStart(2, '0') + ":" + date.getMinutes().toString().padStart(2, '0');
+}
+
+type CalendarEntry = {
+    start: Date;
+    end: Date;
+    title: string;
+};
+
+const calendarEntries: globalThis.Ref<Array<CalendarEntry>> = useState('calendarEntries', () => {
+    return [...Array(5 + Math.floor(Math.random() * 5))].map((_, index) => {
+        let start = add(startOfTheWeek, { hours: Math.random() * 7 * 24 });
+        return {
+            start: start,
+            end: add(start, { minutes: (1 + Math.floor(Math.random() * 3)) * 30 }),
+            title: `Event ${index + 1}`
+        };
+    });
+});
+
 </script>
 
 <template>
@@ -42,11 +67,15 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
                     </div>
                 </div>
                 <span class="time-indicators-placeholder"></span>
-                <div class="day" :class="{ 'first': index == 0 }" v-for="(day, index) in daysOfTheWeek" :key="day">
+                <div class="day" :class="{ 'first': index == 0 }" v-for="(day, index) in thisWeek"
+                    :key="day.date.toString()">
                     <div class="events">
-                        <div class="event" v-for="r in Math.floor(Math.random() * 3) + 1" :key="r"
-                            :style="{ top: Math.random() * 100 + '%', height: '25px' }">
-                            <span>Event {{ r }}</span>
+                        <div class="event"
+                            v-for="event in calendarEntries.filter((el) => isSameDay(el.start, day.date))"
+                            :key="event.start.toString()"
+                            :style="{ top: dateToPercentOfDay(event.start) + '%', height: dateToPercentOfDay(new Date(event.end.getTime() - event.start.getTime())) + '%' }">
+                            <span>{{ event.title }}</span>
+                            <span class="time">{{ formatTime(event.start) }} – {{ formatTime(event.end) }}</span>
                         </div>
                     </div>
                 </div>
@@ -71,7 +100,6 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
         width: 100%;
 
         padding: 12px 0;
-        background-color: #f2f2f2;
 
         .days {
             display: flex;
@@ -100,14 +128,19 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
                     justify-content: center;
                     align-items: center;
 
-                    font-size: 1.1rem;
+                    font-size: 1.2rem;
                     border-radius: 50%;
-                    background-color: #d3d3d3;
+
+                    &:hover {
+                        cursor: pointer;
+                        background-color: #dfdfdf;
+                    }
 
                 }
 
                 &.today .day-of-the-month {
-                    background-color: #b4cccf;
+                    background-color: #17a9b3;
+                    color: white;
                 }
             }
 
@@ -122,7 +155,7 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
         height: 100%;
         overflow-y: scroll;
         overflow-x: hidden;
-        background: rgb(187, 187, 187);
+        background-color: #f2f2f2;
 
         .days {
             display: flex;
@@ -133,13 +166,15 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
             position: relative;
 
             .time-indicators {
-                flex: 0.8;
-                width: 100%;
-                height: 100%;
                 position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 16px;
 
                 .indicator {
-                    position: relative;
+                    position: absolute;
                     height: 0px;
                     width: 100%;
                     display: flex;
@@ -179,16 +214,27 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
 
                     .event {
                         flex: 1;
-                        position: relative;
+                        position: absolute;
+                        left: 0;
+                        right: 12px;
 
                         display: inline-flex;
                         flex-direction: column;
-                        justify-content: center;
-                        text-align: center;
-                        background: #cfcfcf;
+                        justify-content: start;
+                        background: #1595e5;
+                        color: white;
                         border-radius: 4px;
-                        padding: 4px;
-                        width: 100%;
+                        padding: 4px 8px;
+                        font-size: 0.8rem;
+                        cursor: pointer;
+
+                        &:hover {
+                            background: #0f8ac4;
+                        }
+
+                        .time {
+                            opacity: 0.8;
+                        }
                     }
                 }
             }
