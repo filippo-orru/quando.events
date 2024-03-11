@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { add, subMilliseconds, getDayOfYear, isSameDay, previousMonday, isToday, isMonday } from "date-fns";
+import { add, isSameDay, previousMonday, isMonday } from "date-fns";
 
 let now = useState('today', () => new Date());
 function updateToday() {
@@ -103,10 +103,8 @@ onMounted(() => {
 <template>
     <div class="calendar">
         <div class="header">
-            <!-- static header row -->
             <div class="days">
                 <div class="time">
-                    <!-- Placeholder for time -->
                 </div>
                 <div class="day" :class="{ 'today': day.isToday }" v-for="day in thisWeek" :key="day.date.getTime()">
                     <span class="day-of-the-week">

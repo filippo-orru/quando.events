@@ -1,0 +1,32 @@
+<script setup lang="ts">
+let header = ref()
+
+function onScroll() {
+    if (window.scrollY > 10) {
+        header.value.classList.add('bg-lime-300', 'shadow-md')
+    } else {
+        header.value.classList.remove('bg-lime-300', 'shadow-md')
+    }
+}
+
+onBeforeMount(() => {
+    window.addEventListener('scroll', onScroll);
+})
+
+onUnmounted(() => {
+    window.removeEventListener('scroll', onScroll);
+});
+
+</script>
+<template>
+    <header class="py-1 px-6 sticky top-0 text-black/70 z-10 transition-colors" ref="header">
+        <div class="container mx-auto flex px-12 justify-between items-center">
+            <img src="/assets/meet-me.svg" class="w-32" />
+            <nav>
+                <a href="#" class="hover:text-black-90 hover:underline">Sign in</a>
+            </nav>
+        </div>
+    </header>
+</template>
+
+<style lang="scss"></style>
