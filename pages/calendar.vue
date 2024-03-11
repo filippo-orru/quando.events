@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { add, subMilliseconds, getDayOfYear, isSameDay, previousMonday, isToday } from "date-fns";
+import { add, subMilliseconds, getDayOfYear, isSameDay, previousMonday, isToday, isMonday } from "date-fns";
 
 let now = useState('today', () => new Date());
 function updateToday() {
@@ -14,9 +14,8 @@ onUnmounted(() => {
     clearInterval(updateTodayTimer);
 });
 
-let startOfTheWeek = previousMonday(now.value);
+let startOfTheWeek = isMonday(now.value) ? new Date(now.value) : previousMonday(now.value);
 startOfTheWeek.setHours(0, 0, 0, 0);
-let endOfTheWeek = add(startOfTheWeek, { days: 6 });
 
 const oneDayMs = 24 * 60 * 60 * 1000;
 
@@ -93,9 +92,8 @@ const calendarEventsWithOverlapGroups: globalThis.Ref<Array<Array<CalendarEntry>
 
 onMounted(() => {
     nextTick(() => {
-        scrollViewportRef.value!.scrollTo({
-            top: dateToPercentOfDay(now.value) / 100 * scrollViewportRef.value!.scrollHeight - scrollViewportRef.value!.clientHeight + 150,
-        });
+        let top = (1 - dateToPercentOfDay(now.value) / 100) * scrollViewportRef.value!.scrollHeight - 200;
+        scrollViewportRef.value!.scrollTo({top: top});
         viewportIsReady.value = true;
     });
 });
@@ -111,13 +109,16 @@ onMounted(() => {
                     <!-- Placeholder for time -->
                 </div>
                 <div class="day" :class="{ 'today': day.isToday }" v-for="day in thisWeek" :key="day.date.getTime()">
-                    <span class="day-of-the-week">{{ day.dayOfTheWeek.substring(0, 3).toUpperCase() }}</span>
+                    <span class="day-of-the-week">
+                        <span class="single-letter">{{ day.dayOfTheWeek.substring(0, 1).toUpperCase() }}</span>
+                        <span class="full">{{ day.dayOfTheWeek.substring(0, 3).toUpperCase() }}</span>
+                    </span>
                     <span class="day-of-the-month">{{ day.date.getDate() }}</span>
                 </div>
             </div>
         </div>
         <div class="body" ref="scrollViewportRef">
-            <div class="days" :class="{ 'ready': viewportIsReady}">
+            <div class="days" :class="{ 'ready': viewportIsReady }">
                 <div class="time-indicators">
                     <div class="indicator" v-for="(hour, index) in 24" :key="hour"
                         :style="{ top: (100 * index / 24) + '%' }">
@@ -164,9 +165,13 @@ onMounted(() => {
 
     --var-accent: #1595e5;
     --var-accent-hover: #128bc3;
+    --var-text-on-accent: white;
 
     --var-text: #333333;
     --var-text-secondary: #7c7c7c;
+
+    --var-now-indicator: #ec3737;
+    --var-now-indicator: #3a3a3a;
 
     display: flex;
     flex-direction: column;
@@ -218,7 +223,20 @@ onMounted(() => {
                         cursor: pointer;
                         background-color: #dfdfdf;
                     }
+                }
 
+                .day-of-the-week .full {
+                    display: none;
+                }
+
+                @media screen and (min-width: 768px) {
+                    .day-of-the-week .single-letter {
+                        display: none;
+                    }
+
+                    .day-of-the-week .full {
+                        display: block;
+                    }
                 }
 
                 &.today .day-of-the-month {
@@ -249,10 +267,16 @@ onMounted(() => {
             flex-direction: row;
             width: 100%;
             height: 1500px;
-            padding: 16px;
+            padding: 16px 6px;
+
+            @media screen and (min-width: 768px) {
+                padding: 16px;
+            }
+
             position: relative;
 
             opacity: 0;
+
             &.ready {
                 opacity: 1;
                 transition: opacity 0.15s;
@@ -264,7 +288,11 @@ onMounted(() => {
                 bottom: 0;
                 left: 0;
                 right: 0;
-                margin: 16px;
+                margin: 16px 6px;
+
+                @media screen and (min-width: 768px) {
+                    margin: 16px;
+                }
 
                 .indicator {
                     position: absolute;
@@ -313,13 +341,13 @@ onMounted(() => {
                         width: 100%;
                         height: 2px;
                         transform: translateY(-50%);
-                        background-color: #ec3737;
+                        background-color: var(--var-now-indicator);
 
                         .dot {
                             position: absolute;
                             width: 11px;
                             height: 11px;
-                            background-color: #ec3737;
+                            background-color: var(--var-now-indicator);
                             border-radius: 50%;
                             top: 50%;
                             transform: translate(-50%, -50%);
@@ -330,18 +358,27 @@ onMounted(() => {
                         flex: 1;
                         position: absolute;
                         left: 0;
-                        right: 12px;
+                        right: 4px;
+
+                        @media screen and (min-width: 768px) {
+                            right: 12px;
+                        }
+
                         overflow: hidden;
 
                         display: inline-flex;
                         flex-direction: column;
                         justify-content: flex-start;
                         background: var(--var-accent);
-                        color: white;
+                        color: var(--var-text-on-accent);
                         border-radius: 4px;
-                        padding: 4px 8px;
-                        font-size: 0.8rem;
+                        font-size: 0.7rem;
                         cursor: pointer;
+                        padding: 3px;
+                        word-break: break-all;
+                        @media screen and (min-width: 768px) {
+                            padding: 4px 8px;
+                        }
 
                         &:hover {
                             background: var(--var-accent-hover);
@@ -359,7 +396,11 @@ onMounted(() => {
                         }
 
                         .time {
+                            display: none;
                             opacity: 0.8;
+                            @media screen and (min-width: 768px) {
+                                display: block;
+                            }
                         }
                     }
                 }
