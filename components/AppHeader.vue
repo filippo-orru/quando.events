@@ -23,7 +23,7 @@ onUnmounted(() => {
         <div class="container mx-auto flex px-12 justify-between items-center">
             <img src="/assets/meet-me.svg" class="w-32" />
             <nav>
-                <a href="#" class="hover:text-black-90 hover:underline">Sign in</a>
+                <NuxtLink to="/sign-in" class="hover:text-black-90 hover:underline">Sign in</NuxtLink>
             </nav>
         </div>
     </header>

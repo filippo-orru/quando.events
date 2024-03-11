@@ -15,7 +15,7 @@ export const NewMeetingSteps = {
         title: 'Name',
         link: 'name'
     },
-    Times: {
+    Calendar: {
         step: StepEnum.Times,
         title: 'Times',
         link: 'calendar'

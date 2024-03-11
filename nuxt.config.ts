@@ -16,5 +16,9 @@ export default defineNuxtConfig({
       "@fortawesome/vue-fontawesome"
     ],
   },
+  modules: [
+    '@pinia/nuxt',
+    '@pinia-plugin-persistedstate/nuxt',
+  ],
 })
 
