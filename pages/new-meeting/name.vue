@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { NewMeetingStep } from '~/data/NewMeeting';
+/* __placeholder__ */
+import { NewMeetingSteps } from '~/data/NewMeeting';
 
 </script>
 
 <template>
-    <NewMeetingWrapper title="Name" :step="NewMeetingStep.Name">
+    <NewMeetingWrapper title="Name" :step="NewMeetingSteps.Name" :padding="true">
         <section>
-            <p>Enter your name to get started. It will be shown to the participants of your event.</p>
-            <div>
+            <p class="text-gray-800">Enter your name to get started. It will be shown to the participants of your event.</p>
+            <div class="mt-4">
                 <input type="text" id="first_name"
                     class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
                     placeholder="Alex" required />
