@@ -25,14 +25,26 @@ const viewportIsReady = useState('viewportIsReady', () => false);
 let daysOfTheWeek = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ];
-let thisWeek = daysOfTheWeek.map((day, index) => {
-    const date = add(getStartOfTheWeek(), { days: index });
-    return {
-        dayOfTheWeek: day,
-        date: date,
-        isToday: isSameDay(now.value, date)
-    }
-});
+
+let currentWeek = useState('currentWeek', () => getStartOfTheWeek(now.value));
+let weekTransitionDirection = useState('lastWeekChange', () => true); // True for right, false for left. Used for transition
+function toWeek(next: boolean) {
+    weekTransitionDirection.value = next;
+    setTimeout(() => {
+        currentWeek.value = add(currentWeek.value, { weeks: next ? 1 : -1 });
+    }, 0);
+}
+
+function getDaysOfWeek(monday: Date) {
+    return daysOfTheWeek.map((day, index) => {
+        const date = add(monday, { days: index });
+        return {
+            dayOfTheWeek: day,
+            date: date,
+            isToday: isSameDay(now.value, date)
+        }
+    });
+}
 
 function dateToPercentOfDay(date: Date) {
     let oneDayMinutes = 24 * 60;
@@ -79,7 +91,29 @@ function formatTimeslotDuration(slot: CalendarTimeslot) {
 }
 
 function showAddTimeslotButtonFor(day: Date, hour: number) {
-    return !store.selectedTimes.some((slot) => isSameDay(slot.start, day) && slot.start.getHours() <= hour && slot.end.getHours() >= hour + 1);
+    let timeslot: CalendarTimeslot = {
+        start: addHours(day, hour),
+        end: addHours(day, hour + 1),
+    };
+    return store.selectedTimes.every((slot2) => timeslotsOverlap(timeslot, slot2) in [Overlap.None, Overlap.Touch]);
+}
+
+enum Overlap {
+    None, Touch, Cover, Overlap
+}
+function timeslotsOverlap(slot1: CalendarTimeslot, slot2: CalendarTimeslot): Overlap {
+    if (slot1.start <= slot2.start && slot1.end >= slot2.end) {
+        return Overlap.Cover;
+    } else if ((slot1.start < slot2.start && slot1.end > slot2.start) ||
+        (slot1.start < slot2.end && slot1.end > slot2.end)) {
+        return Overlap.Overlap;
+    } else if ((slot1.start <= slot2.start && slot1.end >= slot2.start) ||
+        (slot1.start <= slot2.end && slot1.end >= slot2.end)) {
+        return Overlap.Touch;
+    } else {
+        return Overlap.None;
+    }
+
 }
 
 function mergeOverlappingTimeslots() {
@@ -92,23 +126,26 @@ function mergeOverlappingTimeslots() {
         for (let slot of list) {
             for (let otherSlot of list) {
                 if (slot == otherSlot) continue;
+                let overlap = timeslotsOverlap(slot, otherSlot);
+                switch (overlap) {
+                    case Overlap.None:
+                        break;
+                    case Overlap.Cover:
+                        // slot1 completely contains otherSlot
+                        list = list.filter((s) => s != otherSlot);
+                        allOk = false;
+                        break outer;
+                    case Overlap.Overlap:
+                    case Overlap.Touch:
+                        // slot overlaps otherSlot
+                        let newStart = slot.start < otherSlot.start ? slot.start : otherSlot.start;
+                        let newEnd = slot.end > otherSlot.end ? slot.end : otherSlot.end;
+                        slot.start = newStart;
+                        slot.end = newEnd;
 
-                if (slot.start <= otherSlot.start && slot.end >= otherSlot.end) {
-                    // slot completely contains otherSlot
-                    list = list.filter((s) => s != otherSlot);
-                    allOk = false;
-                    break outer;
-                } else if ((slot.start <= otherSlot.start && slot.end >= otherSlot.start) ||
-                    (slot.start <= otherSlot.end && slot.end >= otherSlot.end)) {
-                    // slot overlaps otherSlot
-                    let newStart = slot.start < otherSlot.start ? slot.start : otherSlot.start;
-                    let newEnd = slot.end > otherSlot.end ? slot.end : otherSlot.end;
-                    slot.start = newStart;
-                    slot.end = newEnd;
-
-                    list = list.filter((s) => s != otherSlot);
-                    allOk = false;
-                    break outer;
+                        list = list.filter((s) => s != otherSlot);
+                        allOk = false;
+                        break outer;
                 }
             }
         }
@@ -248,18 +285,25 @@ function getTimeslotWithDrag(slot: CalendarTimeslot, drag: DragTimeslot) {
     return draggingSlot;
 }
 
+function scrollToNow() {
+    let thisMonday = getStartOfTheWeek(now.value);
+    if (currentWeek.value != thisMonday) {
+        weekTransitionDirection.value = currentWeek.value < thisMonday;
+        currentWeek.value = thisMonday;
+    }
+
+    let scrollHeight = scrollViewportRef.value!.scrollHeight;
+    let top = scrollHeight * dateToPercentOfDay(now.value) / 100 - 150;
+    // console.log(scrollHeight, '*', dateToPercentOfDay(now.value) / 100, '-', 150, '=', top);
+    scrollViewportRef.value!.scrollTo({ top: top });
+}
+
 onMounted(() => {
     minMoveDelta = Math.min(130, window.innerHeight * 0.15);
     locale = navigator.languages[0] || 'en-US';
 
     nextTick(() => {
-        let scrollHeight = scrollViewportRef.value!.scrollHeight;
-        let top = scrollHeight * dateToPercentOfDay(now.value) / 100 - 150;
-        console.log(scrollHeight, '*', dateToPercentOfDay(now.value) / 100, '-', 150, '=', top);
-        scrollViewportRef.value!.scrollTo({ top: top });
-
-        // maxBottomSheetHeight = (scrollViewportRef.value!.clientHeight - 32);
-
+        scrollToNow();
         viewportIsReady.value = true;
     });
 });
@@ -272,54 +316,91 @@ onMounted(() => {
             <div class="flex flex-col w-full h-full overflow-hidden  md:ml-3">
                 <div class="w-full pt-4 pb-2">
                     <!-- Calendar header -->
-                    <div class="container mx-auto flex w-full h-full justify-stretch items-center px-4 text-gray-500">
-                        <div class="w-12 flex-shrink-0">
-                        </div>
-                        <div class="inline-flex flex-col justify-center items-center flex-1 gap-1 text-center text-xs"
-                            v-for="day in thisWeek" :key="day.date.getTime()">
-                            <div>
-                                <span class="md:hidden">{{ day.dayOfTheWeek.substring(0, 1).toUpperCase() }}</span>
-                                <span class="hidden md:block">{{ day.dayOfTheWeek.substring(0, 3).toUpperCase()
-                                    }}</span>
+                    <div class="mb-4 flex items-center justify-start gap-4 px-4 text-slate-500">
+                        <!-- Today button, left / right chevrons to navigate weeks, current month -->
+                        <button
+                            class="mr-4 flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
+                            @click="scrollToNow">
+                            Today
+                        </button>
+                        <div class="flex items-center justify-start gap-2">
+                            <div class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-sm"
+                                @click="toWeek(false)">
+                                <font-awesome-icon icon="chevron-left" />
                             </div>
-                            <span class="inline-flex justify-center items-center w-10 h-10 text-2xl rounded-full"
-                                :class="{ 'bg-lime-500 text-white': day.isToday }">{{ day.date.getDate() }}</span>
+                            <div class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-sm"
+                                @click="toWeek(true)">
+                                <font-awesome-icon icon="chevron-right" />
+                            </div>
+                        </div>
+
+                        <div class="ml-4 flex items-center justify-center text-xl">
+                            <Transition name="fade" mode="out-in">
+                                <p :key="currentWeek.toLocaleString(locale, { month: 'long', year: 'numeric' })">{{
+        currentWeek.toLocaleString(locale, { month: 'long', year: 'numeric' }) }}
+                                </p>
+                            </Transition>
                         </div>
                     </div>
+                    <!-- <div class="relative"> -->
+                    <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
+                        <div :key="currentWeek.getTime()"
+                            class="w-full container mx-auto flex justify-stretch items-center px-4 text-gray-500">
+                            <div class="w-12 flex-shrink-0">
+                                <!-- Time indicators placeholder -->
+                            </div>
+                            <div class="inline-flex flex-col justify-center items-center flex-1 gap-1 text-center text-xs"
+                                v-for="day in getDaysOfWeek(currentWeek)" :key="day.date.getTime()">
+                                <div>
+                                    <span class="md:hidden">{{ day.dayOfTheWeek.substring(0, 1).toUpperCase()
+                                        }}</span>
+                                    <span class="hidden md:block">{{ day.dayOfTheWeek.substring(0, 3).toUpperCase()
+                                        }}</span>
+                                </div>
+                                <span class="inline-flex justify-center items-center w-10 h-10 text-2xl rounded-full"
+                                    :class="{ 'bg-lime-500 text-white': day.isToday }">{{ day.date.getDate()
+                                    }}</span>
+                            </div>
+                        </div>
+                    </Transition>
+                    <!-- </div> -->
                 </div>
                 <div class="w-full h-full overflow-scroll overflow-x-hidden" ref="scrollViewportRef">
                     <!-- Scrollable -->
-                    <div class="container mx-auto w-full flex h-[1500px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
-                        :class="{ 'opacity-100': viewportIsReady }">
-                        <!-- Days viewport (tall) -->
-                        <div class="absolute top-0 bottom-0 left-0 right-0 my-4 mx-2 md:mx-4">
-                            <!-- Time indicators -->
-                            <div v-for="(hour, index) in 24"
-                                class="absolute h-0 w-full flex justify-stretch items-center gap-2 text-xs text-gray-400"
-                                :key="hour" :style="{ top: (100 * index / 24) + '%' }">
-                                <!-- Time indicator -->
-                                <div>{{ (hour - 1).toString().padStart(2, '0') }}:00</div>
-                                <div class="w-full border-t bg-gray-200"></div>
+                    <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
+                        <div :key="currentWeek.getTime()"
+                            class="container mx-auto w-full flex h-[1500px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
+                            :class="{ 'opacity-100': viewportIsReady }">
+                            <!-- Days viewport (tall) -->
+                            <div class="absolute top-0 bottom-0 left-0 right-0 my-4 mx-2 md:mx-4">
+                                <!-- Time indicators -->
+                                <div v-for="(hour, index) in 24"
+                                    class="absolute h-0 w-full flex justify-stretch items-center gap-2 text-xs text-gray-400"
+                                    :key="hour" :style="{ top: (100 * index / 24) + '%' }">
+                                    <!-- Time indicator -->
+                                    <div>{{ (hour - 1).toString().padStart(2, '0') }}:00</div>
+                                    <div class="w-full border-t bg-gray-200"></div>
+                                </div>
                             </div>
-                        </div>
-                        <span class="w-12 flex-shrink-0"></span>
-                        <div v-for="(day, index) in  thisWeek " class="flex-1 h-full relative border-r border-gray-200"
-                            :class="{ 'border-l': index == 0 }" :key="day.date.toString()"
-                            @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
-                            @mouseup="(event) => dragTimeslotEnd(event.screenY)"
-                            @touchmove="(event) => dragTimeslotMove(event, event.touches[0] && event.touches[0].screenY, true)"
-                            @touchend="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)">
-                            <!-- Day -->
+                            <span class="w-12 flex-shrink-0"></span>
+                            <div v-for="(day, index) in  getDaysOfWeek(currentWeek) "
+                                class="flex-1 h-full relative border-r border-gray-200"
+                                :class="{ 'border-l': index == 0 }" :key="day.date.toString()"
+                                @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
+                                @mouseup="(event) => dragTimeslotEnd(event.screenY)"
+                                @touchmove="(event) => dragTimeslotMove(event, event.touches[0] && event.touches[0].screenY, true)"
+                                @touchend="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)">
+                                <!-- Day -->
 
-                            <div class="w-full h-full absolute">
+                                <div class="w-full h-full absolute">
 
-                                <!-- Events -->
-                                <div v-for="group in store.eventsInOverlapGroups.filter((group) => group.some((event) => isSameDay(event.start, day.date)))"
-                                    :key="group[0].start.toString()">
-                                    <!-- Event overlap group -->
-                                    <div class="absolute left-0 right-1 md:right-2 p-1 md:px-2 md:py-2 overflow-hidden inline-flex flex-col justify-start 
+                                    <!-- Events -->
+                                    <div v-for="group in store.eventsInOverlapGroups.filter((group) => group.some((event) => isSameDay(event.start, day.date)))"
+                                        :key="group[0].start.toString()">
+                                        <!-- Event overlap group -->
+                                        <div class="absolute left-0 right-1 md:right-2 p-1 md:px-2 md:py-2 overflow-hidden inline-flex flex-col justify-start 
                                     bg-lime-500/80 text-gray-600 rounded-md text-xs break-all"
-                                        v-for="(event, index) in group" :class="{
+                                            v-for="(event, index) in group" :class="{
         'flex-row gap-4': isShort(event),
         'outline outline-white bg-lime-500 right-0 md:right-0 left-[50%]': index >= 1,
         'pr-[50%]': index == 0 && group.length > 1
@@ -327,88 +408,89 @@ onMounted(() => {
         top: dateToPercentOfDay(event.start) + '%',
         height: 'calc(' + getHeight(event) * 100 + '% - 1px)',
     }" :data-overlay-index="index" :data-overlay-group-size="group.length">
-                                        <!-- Event -->
-                                        <span>{{ event.title }}</span>
-                                        <div class="hidden opacity-80 md:block">
-                                            <span v-if="!isShort(event)">
-                                                {{ formatTime(event.start) }} – {{ formatTime(event.end) }}
-                                            </span>
-                                            <span v-else>{{ formatTime(event.start) }}</span>
+                                            <!-- Event -->
+                                            <span>{{ event.title }}</span>
+                                            <div class="hidden opacity-80 md:block">
+                                                <span v-if="!isShort(event)">
+                                                    {{ formatTime(event.start) }} – {{ formatTime(event.end) }}
+                                                </span>
+                                                <span v-else>{{ formatTime(event.start) }}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <!-- add time slot buttons -->
-                                <div class="absolute w-full h-full flex flex-col"
-                                    :class="{ 'hidden': draggingTimeslotPosition }">
-                                    <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
-                                        <!-- add time slot -->
-                                        <div v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-blue-200/80 rounded-md flex items-center justify-center
+                                    <!-- add time slot buttons -->
+                                    <div class="absolute w-full h-full flex flex-col"
+                                        :class="{ 'hidden': draggingTimeslotPosition }">
+                                        <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
+                                            <!-- add time slot -->
+                                            <div v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-blue-200/80 rounded-md flex items-center justify-center
                                     opacity-0 active:opacity-100 md:hover:opacity-100 transition-opacity"
-                                            @click="addTimeslotViaTap(day.date, hour - 1)">
-                                            <font-awesome-icon icon="plus" class="text-gray-500" />
+                                                @click="addTimeslotViaTap(day.date, hour - 1)">
+                                                <font-awesome-icon icon="plus" class="text-gray-500" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <!-- Time slots -->
-                                <div v-for="slot in  store.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
-                                    :key="slot.start.toString()"
-                                    class="
+                                    <!-- Time slots -->
+                                    <div v-for="slot in  store.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
+                                        :key="slot.start.toString()"
+                                        class="
                                     bg-blue-500 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all group"
-                                    :style="{
+                                        :style="{
         '-webkit-touch-callout': 'none', top: getTimeslotTop(slot) + '%', height: 'calc('
             + getTimeslotHeight(slot) * 100 + '% - 1px)',
     }" :class="{ 'striped-background': draggingTimeslotPosition?.slot !== slot || draggingTimeslotPosition?.which !== 'both' }">
-                                    <!-- Time slot -->
-                                    <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden">
-                                        <div class="absolute left-0 right-0 top-3 bottom-3"
-                                            @touchstart="(event) => dragTimeslotStart(event, slot, 'both', event.touches[0] && event.touches[0].screenY)"
-                                            @touchcancel="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)"
-                                            @mousedown="(event) => dragTimeslotStart(event, slot, 'both', event.screenY)">
-                                            <!-- Center drag area for touch -->
-                                        </div>
+                                        <!-- Time slot -->
+                                        <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden">
+                                            <div class="absolute left-0 right-0 top-3 bottom-3"
+                                                @touchstart="(event) => dragTimeslotStart(event, slot, 'both', event.touches[0] && event.touches[0].screenY)"
+                                                @touchcancel="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)"
+                                                @mousedown="(event) => dragTimeslotStart(event, slot, 'both', event.screenY)">
+                                                <!-- Center drag area for touch -->
+                                            </div>
 
-                                        <span class="transition-all"
-                                            :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
-                                            {{ formatTimeslotDuration(slot) }}</span>
-                                    </div>
-                                    <!-- Drag handles -->
-                                    <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-blue-400 rounded-full p-1 top-0 left-1 md:right-1 -translate-y-1/2
+                                            <span class="transition-all"
+                                                :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
+                                                {{ formatTimeslotDuration(slot) }}</span>
+                                        </div>
+                                        <!-- Drag handles -->
+                                        <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-blue-400 rounded-full p-1 top-0 left-1 md:right-1 -translate-y-1/2
                                     md:translate-y-0"
-                                        @mousedown="(event) => dragTimeslotStart(event, slot, 'start', event.screenY)"
-                                        @touchstart="(event) => dragTimeslotStart(event, slot, 'start', event.touches[0] && event.touches[0].screenY)">
-                                        <!-- Hover indicator -->
-                                        <div class="hidden absolute left-0 right-0 text-slate-500 -translate-y-1/2 md:flex justify-center 
+                                            @mousedown="(event) => dragTimeslotStart(event, slot, 'start', event.screenY)"
+                                            @touchstart="(event) => dragTimeslotStart(event, slot, 'start', event.touches[0] && event.touches[0].screenY)">
+                                            <!-- Hover indicator -->
+                                            <div class="hidden absolute left-0 right-0 text-slate-500 -translate-y-1/2 md:flex justify-center 
                                         opacity-0 transition-opacity group-hover:opacity-100"
-                                            :class="{ 'opacity-100': draggingTimeslotPosition?.slot === slot }">
-                                            <font-awesome-icon icon="caret-up" />
+                                                :class="{ 'opacity-100': draggingTimeslotPosition?.slot === slot }">
+                                                <font-awesome-icon icon="caret-up" />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-blue-400 rounded-full p-1 bottom-0 right-1 md:left-1 translate-y-1/2
+                                        <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-blue-400 rounded-full p-1 bottom-0 right-1 md:left-1 translate-y-1/2
                                     md:translate-y-0"
-                                        @mousedown="(event) => dragTimeslotStart(event, slot, 'end', event.screenY)"
-                                        @touchstart="(event) => dragTimeslotStart(event, slot, 'end', event.touches[0] && event.touches[0].screenY)">
-                                        <!-- Hover indicator -->
-                                        <div class="hidden absolute left-0 right-0 text-slate-500 -translate-y-1/2 md:flex justify-center 
+                                            @mousedown="(event) => dragTimeslotStart(event, slot, 'end', event.screenY)"
+                                            @touchstart="(event) => dragTimeslotStart(event, slot, 'end', event.touches[0] && event.touches[0].screenY)">
+                                            <!-- Hover indicator -->
+                                            <div class="hidden absolute left-0 right-0 text-slate-500 -translate-y-1/2 md:flex justify-center 
                                     opacity-0 transition-opacity group-hover:opacity-100"
-                                            :class="{ 'opacity-100': draggingTimeslotPosition?.slot === slot }">
-                                            <font-awesome-icon icon="caret-down" />
+                                                :class="{ 'opacity-100': draggingTimeslotPosition?.slot === slot }">
+                                                <font-awesome-icon icon="caret-down" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <!-- Now indicator -->
-                                <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
-                                    :style="{ top: dateToPercentOfDay(now) + '%' }">
-                                    <!-- Dot -->
-                                    <div
-                                        class="absolute w-3 h-3 bg-gray-500 rounded-full top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                    <!-- Now indicator -->
+                                    <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
+                                        :style="{ top: dateToPercentOfDay(now) + '%' }">
+                                        <!-- Dot -->
+                                        <div
+                                            class="absolute w-3 h-3 bg-gray-500 rounded-full top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Transition>
                 </div>
             </div>
 
@@ -426,7 +508,8 @@ onMounted(() => {
                 <div class="w-full absolute bottom-0 px-3 md:py-8 bg-white border-t rounded-tr-2xl rounded-tl-2xl flex flex-col overflow-hidden
                 h-16 data-[expanded=true]:h-[80%] md:data-[expanded=true]:h-full
                  md:h-full md:border-0 md:border-r md:rounded-none pointer-events-auto
-                    shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] z-10 transition-all" :data-expanded="bottomSheetExpanded">
+                    shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] md:shadow-none z-10 transition-all"
+                    :data-expanded="bottomSheetExpanded">
 
                     <!-- Sidebar head -->
                     <div @click="toggleBottomSheet" @touchstart="bottomSheetSwipeStart"
@@ -471,5 +554,39 @@ onMounted(() => {
 <style>
 .striped-background {
     background: repeating-linear-gradient(-225deg, #2585e9ba, #2585e9ba 10px, #2585e9 10px, #2585e9 20px);
+}
+
+/* Transitions */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.change-week-l-enter-active,
+.change-week-r-enter-active {
+    transition: all 0.1s ease-out;
+}
+
+.change-week-l-leave-active,
+.change-week-r-leave-active {
+    transition: all 0.1s ease-in;
+}
+
+.change-week-l-leave-to,
+.change-week-r-enter-from {
+    transform: translateX(20px);
+    opacity: 0;
+}
+
+.change-week-l-enter-from,
+.change-week-r-leave-to {
+    transform: translateX(-20px);
+    opacity: 0;
 }
 </style>
