@@ -11,14 +11,6 @@ function updateToday() {
 }
 let updateTodayTimer: NodeJS.Timeout;
 
-onBeforeMount(() => {
-    updateTodayTimer = setInterval(updateToday, 1000);
-});
-onUnmounted(() => {
-    clearInterval(updateTodayTimer);
-});
-
-
 const scrollViewportRef = ref<HTMLDivElement>();
 const viewportIsReady = useState('viewportIsReady', () => false);
 
@@ -197,12 +189,21 @@ function bottomSheetSwipeMove(event: TouchEvent) {
 
     let delta = event.touches[0].screenY - swipeStartY!;
     if (bottomSheetExpanded.value && delta > minMoveDelta) {
-        // console.log(delta);
         bottomSheetExpanded.value = false;
     } else if (!bottomSheetExpanded.value && delta < -minMoveDelta) {
-        // console.log(delta);
         bottomSheetExpanded.value = true;
     }
+}
+
+let brands = ['google', 'microsoft', 'apple'];
+let currentBrand = useState('currentBrand', () => 0);
+let nextBrandTimer: NodeJS.Timeout;
+function nextBrand() {
+    currentBrand.value = (currentBrand.value + 1) % brands.length;
+}
+
+function showImportEventsDialog() {
+
 }
 
 type DragTimeslotWhich = 'start' | 'end' | 'both';
@@ -273,16 +274,39 @@ function getTimeslotWithDrag(slot: CalendarTimeslot, drag: DragTimeslot) {
 
     switch (drag.which) {
         case 'start':
-            draggingSlot.start = addMinutes(drag.slot.start, deltaMinutes);
+            draggingSlot.start = addMinutes(slot.start, deltaMinutes);
             break;
         case 'end':
-            draggingSlot.end = addMinutes(drag.slot.end, deltaMinutes);
+            draggingSlot.end = addMinutes(slot.end, deltaMinutes);
             break;
         case 'both':
-            draggingSlot.start = addMinutes(drag.slot.start, deltaMinutes);
-            draggingSlot.end = addMinutes(drag.slot.end, deltaMinutes);
+            draggingSlot.start = addMinutes(slot.start, deltaMinutes);
+            draggingSlot.end = addMinutes(slot.end, deltaMinutes);
     }
     return draggingSlot;
+}
+
+let swipeStartX: number | null = null;
+function weekSwipeStart(event: TouchEvent) {
+    swipeStartX = event.touches[0].screenX;
+}
+function weekSwipeMove(event: TouchEvent) {
+    if (event.touches.length < 1 || !swipeStartX) {
+        return;
+    }
+
+    let delta = event.touches[0].screenX - swipeStartX;
+    if (delta > minMoveDelta) {
+        toWeek(false);
+        swipeStartX = null;
+    } else if (delta < -minMoveDelta) {
+        toWeek(true);
+        swipeStartX = null;
+    }
+}
+
+function weekSwipeEnd(event: TouchEvent) {
+    swipeStartX = null;
 }
 
 function scrollToNow() {
@@ -298,9 +322,16 @@ function scrollToNow() {
     scrollViewportRef.value!.scrollTo({ top: top });
 }
 
+onBeforeMount(() => {
+    updateTodayTimer = setInterval(updateToday, 1000);
+    nextBrandTimer = setInterval(nextBrand, 5000);
+});
+
+
 onMounted(() => {
     minMoveDelta = Math.min(130, window.innerHeight * 0.15);
     locale = navigator.languages[0] || 'en-US';
+
 
     nextTick(() => {
         scrollToNow();
@@ -308,39 +339,66 @@ onMounted(() => {
     });
 });
 
+onUnmounted(() => {
+    clearInterval(updateTodayTimer);
+    clearInterval(nextBrandTimer);
+});
+
 </script>
 
 <template>
-    <NewMeetingWrapper :step="NewMeetingSteps.Calendar" :next-step="NewMeetingSteps.Invite" :padding="false">
+    <NewMeetingWrapper :step="NewMeetingSteps.Calendar" :next-step="NewMeetingSteps.Invite" :padding="false"
+        button-class="bottom-24 md:bottom-10">
         <div class="h-full md:flex md:flex-row-reverse select-none">
             <div class="flex flex-col w-full h-full overflow-hidden  md:ml-3">
                 <div class="w-full pt-4 pb-2">
                     <!-- Calendar header -->
                     <div class="mb-4 flex items-center justify-start gap-4 px-4 text-slate-500">
-                        <!-- Today button, left / right chevrons to navigate weeks, current month -->
-                        <button
-                            class="mr-4 flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
-                            @click="scrollToNow">
-                            Today
-                        </button>
-                        <div class="flex items-center justify-start gap-2">
-                            <div class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-sm"
-                                @click="toWeek(false)">
-                                <font-awesome-icon icon="chevron-left" />
+                        <div class="flex flex-row-reverse">
+                            <!-- Today button, left / right chevrons to navigate weeks, current month -->
+                            <button
+                                class="mr-4 flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
+                                @click="scrollToNow">
+                                Today
+                            </button>
+
+                            <div class="hidden md:flex items-center justify-start gap-2">
+                                <div class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-sm"
+                                    @click="toWeek(false)">
+                                    <font-awesome-icon icon="chevron-left" />
+                                </div>
+                                <div class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-sm"
+                                    @click="toWeek(true)">
+                                    <font-awesome-icon icon="chevron-right" />
+                                </div>
                             </div>
-                            <div class="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-sm"
-                                @click="toWeek(true)">
-                                <font-awesome-icon icon="chevron-right" />
+
+                            <div class="mx-4 flex items-center justify-center text-xl">
+                                <Transition name="fade" mode="out-in">
+                                    <p :key="currentWeek.toLocaleString(locale, { month: 'long', year: 'numeric' })">
+                                        <span>{{ currentWeek.toLocaleString(locale, { month: 'long' })
+                                            }}&nbsp;
+                                        </span>
+                                        <span class="hidden md:inline-block">{{ currentWeek.toLocaleString(locale, {
+        year: 'numeric'
+    })
+                                            }}
+                                        </span>
+                                    </p>
+                                </Transition>
                             </div>
                         </div>
 
-                        <div class="ml-4 flex items-center justify-center text-xl">
-                            <Transition name="fade" mode="out-in">
-                                <p :key="currentWeek.toLocaleString(locale, { month: 'long', year: 'numeric' })">{{
-        currentWeek.toLocaleString(locale, { month: 'long', year: 'numeric' }) }}
-                                </p>
+                        <!-- Import button -->
+                        <button
+                            class="ml-auto flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
+                            @click="showImportEventsDialog">
+                            <Transition mode="out-in" name="fade">
+                                <font-awesome-icon :key="currentBrand" :icon="'fa-brands fa-' + brands[currentBrand]"
+                                    class="w-4 mr-2" />
                             </Transition>
-                        </div>
+                            Import Calendar
+                        </button>
                     </div>
                     <!-- <div class="relative"> -->
                     <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
@@ -370,7 +428,8 @@ onMounted(() => {
                     <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
                         <div :key="currentWeek.getTime()"
                             class="container mx-auto w-full flex h-[1500px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
-                            :class="{ 'opacity-100': viewportIsReady }">
+                            :class="{ 'opacity-100': viewportIsReady }" @touchstart="weekSwipeStart"
+                            @touchmove="weekSwipeMove">
                             <!-- Days viewport (tall) -->
                             <div class="absolute top-0 bottom-0 left-0 right-0 my-4 mx-2 md:mx-4">
                                 <!-- Time indicators -->
@@ -560,12 +619,12 @@ onMounted(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
+    opacity: 0;
 }
 
 .change-week-l-enter-active,

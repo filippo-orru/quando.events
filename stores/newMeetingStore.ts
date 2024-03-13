@@ -1,4 +1,4 @@
-import { add, intervalToDuration, isMonday, previousMonday } from 'date-fns';
+import { add, intervalToDuration, isMonday, previousMonday, set } from 'date-fns';
 import { defineStore } from 'pinia'
 
 const oneDayMs = 24 * 60 * 60 * 1000;
@@ -45,14 +45,23 @@ interface NewMeetingStore {
 export const useNewMeetingStore = defineStore('newMeetingStore', {
     state: () => {
         // Random events
-        let events = [...Array(5 + Math.floor(Math.random() * 5))].map((_, index) => {
-            let start = add(getStartOfTheWeek(new Date()), { days: Math.floor(Math.random() * 7), hours: 7 + Math.floor(Math.random() * 8) });
-            return {
-                start: start,
-                end: add(start, { minutes: (2 + Math.floor(Math.random() * 5)) * 30 }),
-                title: `Event ${index + 1}`,
-            };
-        });
+        // let events = [...Array(5 + Math.floor(Math.random() * 5))].map((_, index) => {
+        //     let start = add(getStartOfTheWeek(new Date()), { days: Math.floor(Math.random() * 7), hours: 7 + Math.floor(Math.random() * 8) });
+        //     return {
+        //         start: start,
+        //         end: add(start, { minutes: (2 + Math.floor(Math.random() * 5)) * 30 }),
+        //         title: `Event ${index + 1}`,
+        //     };
+        // });
+        let hintEventStart = set(getStartOfTheWeek(new Date()), { hours: 14, minutes: 30 });
+
+        let events = [
+            {
+                'start': hintEventStart,
+                'end': add(hintEventStart, { hours: 3 }),
+                title: 'Click to show your own calendar events!'
+            }
+        ] as CalendarEntry[];
 
         return {
             name: '',
