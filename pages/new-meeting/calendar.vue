@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { add, isSameDay, previousMonday, isMonday } from "date-fns";
+import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration } from "date-fns";
 import { NewMeetingSteps } from '~/data/NewMeeting';
+import { getStartOfTheWeek, getHeight, isShort, type CalendarTimeslot } from "~/stores/newMeetingStore";
 
 let store = useNewMeetingStore();
 
@@ -17,10 +18,6 @@ onUnmounted(() => {
     clearInterval(updateTodayTimer);
 });
 
-let startOfTheWeek = isMonday(now.value) ? new Date(now.value) : previousMonday(now.value);
-startOfTheWeek.setHours(0, 0, 0, 0);
-
-const oneDayMs = 24 * 60 * 60 * 1000;
 
 const scrollViewportRef = ref<HTMLDivElement>();
 const viewportIsReady = useState('viewportIsReady', () => false);
@@ -29,7 +26,7 @@ let daysOfTheWeek = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ];
 let thisWeek = daysOfTheWeek.map((day, index) => {
-    const date = add(startOfTheWeek, { days: index });
+    const date = add(getStartOfTheWeek(), { days: index });
     return {
         dayOfTheWeek: day,
         date: date,
@@ -37,67 +34,221 @@ let thisWeek = daysOfTheWeek.map((day, index) => {
     }
 });
 
-function dateTimeMinutes(date: Date) {
-    return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+function dateToPercentOfDay(date: Date) {
+    let oneDayMinutes = 24 * 60;
+    let dateDayMinutes = date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+    return 100 * dateDayMinutes / oneDayMinutes;
 }
 
-function dateToPercentOfDay(date: Date) {
-    return dateTimeMinutes(date) / (24 * 0.6);
+function getTimeslotTop(slot: CalendarTimeslot): number {
+    if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == slot) {
+        return dateToPercentOfDay(getTimeslotWithDrag(slot, draggingTimeslotPosition.value).start);
+    } else {
+        return dateToPercentOfDay(slot.start);
+    }
+}
+function getTimeslotHeight(slot: CalendarTimeslot): number {
+    if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == slot) {
+        return getHeight(getTimeslotWithDrag(slot, draggingTimeslotPosition.value));
+    } else {
+        return getHeight(slot);
+    }
 }
 
 function formatTime(date: Date) {
     return date.getHours().toString() + ":" + date.getMinutes().toString().padStart(2, '0');
 }
 
-function dateIsBetween(date: Date, start: Date, end: Date) {
-    return date.getTime() > start.getTime() && date.getTime() < end.getTime();
+function formatTimeslotDuration(slot: CalendarTimeslot) {
+    if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == slot) {
+        let draggingSlot = getTimeslotWithDrag(slot, draggingTimeslotPosition.value);
+        return formatDuration(intervalToDuration({ start: draggingSlot.start, end: draggingSlot.end }), { format: ['hours', 'minutes'], zero: true });
+    } else {
+        return formatDuration(intervalToDuration({ start: slot.start, end: slot.end }));
+    }
 }
 
-type CalendarEntry = {
-    start: Date;
-    end: Date;
-    title: string;
-};
-
-function eventDuration(event: CalendarEntry) {
-    return event.end.getTime() - event.start.getTime();
+function showAddTimeslotButtonFor(day: Date, hour: number) {
+    return !store.selectedTimes.some((slot) => isSameDay(slot.start, day) && slot.start.getHours() <= hour && slot.end.getHours() >= hour + 1);
 }
 
-function eventIsShort(event: CalendarEntry) {
-    return eventDuration(event) < 40 * 60 * 1000;
-}
+function mergeOverlappingTimeslots() {
+    let allOk = false;
+    let list = store.selectedTimes;
+    while (!allOk) {
+        allOk = true;
 
-const calendarEventsWithOverlapGroups: globalThis.Ref<Array<Array<CalendarEntry>>> = useState('calendarEntries', () => {
-    let events = [...Array(5 + Math.floor(Math.random() * 5))].map((_, index) => {
-        let start = add(startOfTheWeek, { days: Math.floor(Math.random() * 7), hours: 7 + Math.floor(Math.random() * 8) });
-        return {
-            start: start,
-            end: add(start, { minutes: (2 + Math.floor(Math.random() * 5)) * 30 }),
-            title: `Event ${index + 1}`
-        };
-    });
+        outer:
+        for (let slot of list) {
+            for (let otherSlot of list) {
+                if (slot == otherSlot) continue;
 
-    let overlapGroups: Array<Array<CalendarEntry>> = [];
-    for (let event of events) {
-        let overlapGroup = overlapGroups.find((group) =>
-            group.some((otherEvent) =>
-                dateIsBetween(event.start, otherEvent.start, otherEvent.end) || dateIsBetween(event.end, otherEvent.start, otherEvent.end)
-            )
-        );
-        if (overlapGroup) {
-            overlapGroup.push(event);
-        } else {
-            overlapGroups.push([event]);
+                if (slot.start <= otherSlot.start && slot.end >= otherSlot.end) {
+                    // slot completely contains otherSlot
+                    list = list.filter((s) => s != otherSlot);
+                    allOk = false;
+                    break outer;
+                } else if ((slot.start <= otherSlot.start && slot.end >= otherSlot.start) ||
+                    (slot.start <= otherSlot.end && slot.end >= otherSlot.end)) {
+                    // slot overlaps otherSlot
+                    let newStart = slot.start < otherSlot.start ? slot.start : otherSlot.start;
+                    let newEnd = slot.end > otherSlot.end ? slot.end : otherSlot.end;
+                    slot.start = newStart;
+                    slot.end = newEnd;
+
+                    list = list.filter((s) => s != otherSlot);
+                    allOk = false;
+                    break outer;
+                }
+            }
         }
     }
-    return overlapGroups;
-});
+    store.selectedTimes = list;
+}
+
+function addTimeslotViaTap(day: Date, hour: number) {
+    // Delay for a bit to allow the user to see the button press
+    setTimeout(() => {
+        store.selectedTimes.push({
+            start: addHours(day, hour),
+            end: addHours(day, hour + 1),
+        });
+        mergeOverlappingTimeslots();
+    }, 100);
+}
+let locale: string;
+
+function formatSelectedTimesDay(date: Date) {
+    return date.toLocaleString(locale, { weekday: 'short' }) + " " + date.toLocaleString(locale, { day: '2-digit', month: '2-digit' })
+}
+
+function formatSelectedTimeslotTime(slot: CalendarTimeslot) {
+    return slot.start.toLocaleString(locale, { hour: '2-digit', minute: '2-digit' }) + " – " +
+        slot.end.toLocaleString(locale, { hour: '2-digit', minute: '2-digit' });
+}
+
+function removeTimeslot(day: Date, slot: CalendarTimeslot) {
+    store.selectedTimes = store.selectedTimes.filter((s) => s.start != slot.start);
+}
+
+let bottomSheetExpanded: Ref<boolean> = useState('bottomSheetExpanded', () => false);
+
+function toggleBottomSheet() {
+    bottomSheetExpanded.value = !bottomSheetExpanded.value;
+}
+
+let swipeStartY: number | null = null;
+function bottomSheetSwipeStart(event: TouchEvent) {
+    swipeStartY = event.touches[0].screenY;
+}
+let minMoveDelta: number;
+function bottomSheetSwipeMove(event: TouchEvent) {
+    if (event.touches.length != 1 || !swipeStartY) {
+        swipeStartY = null;
+        return;
+    }
+
+    let delta = event.touches[0].screenY - swipeStartY!;
+    if (bottomSheetExpanded.value && delta > minMoveDelta) {
+        // console.log(delta);
+        bottomSheetExpanded.value = false;
+    } else if (!bottomSheetExpanded.value && delta < -minMoveDelta) {
+        // console.log(delta);
+        bottomSheetExpanded.value = true;
+    }
+}
+
+type DragTimeslotWhich = 'start' | 'end' | 'both';
+type DragTimeslot = {
+    slot: CalendarTimeslot,
+    which: DragTimeslotWhich,
+
+    startY: number,
+    currentY: number,
+    startTimestamp: number,
+};
+let draggingTimeslotPosition: Ref<DragTimeslot | null> = useState('draggingTimeslotPosition', () => null);
+
+let longPressing = false;
+
+function dragTimeslotStart(event: TouchEvent | MouseEvent, slot: CalendarTimeslot, which: DragTimeslotWhich, dragY?: number) {
+    if (!dragY) return;
+
+    draggingTimeslotPosition.value = { slot, which, startY: dragY, currentY: dragY, startTimestamp: Date.now() };
+}
+
+function dragTimeslotMove(event: TouchEvent | MouseEvent, dragY?: number, isTouch: boolean = false) {
+    if (!draggingTimeslotPosition.value || !dragY || !event.cancelable) return;
+
+    if (isTouch && draggingTimeslotPosition.value.which == 'both') {
+        // Long press only required for touch - moving
+        if (!longPressing) {
+            if (Math.abs(dragY - draggingTimeslotPosition.value.startY) > 40) {
+                draggingTimeslotPosition.value = null; // Cancel drag if moved too much 
+                return;
+            }
+            if (Date.now() - draggingTimeslotPosition.value.startTimestamp > 200) {
+                longPressing = true;
+            } else {
+                return;
+            }
+        }
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    draggingTimeslotPosition.value.currentY = dragY;
+}
+
+function dragTimeslotEnd(dragY?: number) {
+    if (!draggingTimeslotPosition.value) return;
+    let y = dragY || draggingTimeslotPosition.value.currentY;
+
+    draggingTimeslotPosition.value.currentY = y;
+    let draggingSlot = getTimeslotWithDrag(draggingTimeslotPosition.value.slot, draggingTimeslotPosition.value);
+    draggingTimeslotPosition.value.slot.start = draggingSlot.start;
+    draggingTimeslotPosition.value.slot.end = draggingSlot.end;
+    mergeOverlappingTimeslots();
+    draggingTimeslotPosition.value = null;
+    longPressing = false;
+}
+
+
+function getTimeslotWithDrag(slot: CalendarTimeslot, drag: DragTimeslot) {
+    let draggingSlot: CalendarTimeslot = {
+        start: drag.slot.start,
+        end: drag.slot.end,
+    };
+
+    let deltaPart = (drag.currentY - drag.startY) / scrollViewportRef.value!.scrollHeight;
+    let deltaMinutes = Math.floor((24 * 60 / 15) * (deltaPart)) * 15;
+
+    switch (drag.which) {
+        case 'start':
+            draggingSlot.start = addMinutes(drag.slot.start, deltaMinutes);
+            break;
+        case 'end':
+            draggingSlot.end = addMinutes(drag.slot.end, deltaMinutes);
+            break;
+        case 'both':
+            draggingSlot.start = addMinutes(drag.slot.start, deltaMinutes);
+            draggingSlot.end = addMinutes(drag.slot.end, deltaMinutes);
+    }
+    return draggingSlot;
+}
 
 onMounted(() => {
+    minMoveDelta = Math.min(130, window.innerHeight * 0.15);
+    locale = navigator.languages[0] || 'en-US';
+
     nextTick(() => {
-        let top = (dateToPercentOfDay(now.value) / 100) * scrollViewportRef.value!.scrollHeight - scrollViewportRef.value!.clientHeight + 200;
-        console.log(dateToPercentOfDay(now.value) / 100 - 1, top);
+        let scrollHeight = scrollViewportRef.value!.scrollHeight;
+        let top = scrollHeight * dateToPercentOfDay(now.value) / 100 - 150;
+        console.log(scrollHeight, '*', dateToPercentOfDay(now.value) / 100, '-', 150, '=', top);
         scrollViewportRef.value!.scrollTo({ top: top });
+
+        // maxBottomSheetHeight = (scrollViewportRef.value!.clientHeight - 32);
+
         viewportIsReady.value = true;
     });
 });
@@ -105,66 +256,186 @@ onMounted(() => {
 </script>
 
 <template>
-    <NewMeetingWrapper title="Calendar" :step="NewMeetingSteps.Calendar" :next-step="NewMeetingSteps.Invite"
-        :padding="false">
-        <div class="flex flex-col w-full h-full overflow-hidden">
-            <div class="flex flex-col w-full py-2">
-                <div class="flex w-full h-full justify-stretch items-center px-4 text-gray-500">
-                    <div class="flex-[0.8]">
-                    </div>
-                    <div class="inline-flex flex-col justify-center items-center flex-1 gap-1 text-center text-xs"
-                        v-for="day in thisWeek" :key="day.date.getTime()">
-                        <div>
-                            <span class="md:hidden">{{ day.dayOfTheWeek.substring(0, 1).toUpperCase() }}</span>
-                            <span class="hidden md:block">{{ day.dayOfTheWeek.substring(0, 3).toUpperCase() }}</span>
+    <NewMeetingWrapper :step="NewMeetingSteps.Calendar" :next-step="NewMeetingSteps.Invite" :padding="false">
+        <div class="h-full md:flex md:flex-row-reverse select-none">
+            <div class="flex flex-col w-full h-full overflow-hidden  md:ml-3">
+                <div class="w-full pt-4 pb-2">
+                    <!-- Calendar header -->
+                    <div class="container mx-auto flex w-full h-full justify-stretch items-center px-4 text-gray-500">
+                        <div class="w-12 flex-shrink-0">
                         </div>
-                        <span class="inline-flex justify-center items-center w-10 h-10 text-2xl rounded-full"
-                            :class="{ 'bg-blue-500 text-white': day.isToday }">{{ day.date.getDate() }}</span>
+                        <div class="inline-flex flex-col justify-center items-center flex-1 gap-1 text-center text-xs"
+                            v-for="day in thisWeek" :key="day.date.getTime()">
+                            <div>
+                                <span class="md:hidden">{{ day.dayOfTheWeek.substring(0, 1).toUpperCase() }}</span>
+                                <span class="hidden md:block">{{ day.dayOfTheWeek.substring(0, 3).toUpperCase()
+                                    }}</span>
+                            </div>
+                            <span class="inline-flex justify-center items-center w-10 h-10 text-2xl rounded-full"
+                                :class="{ 'bg-lime-500 text-white': day.isToday }">{{ day.date.getDate() }}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="w-full h-full overflow-y-scroll overflow-x-hidden" ref="scrollViewportRef">
-                <div class="container mx-auto w-full flex h-[1500px] py-4 px-2 md:px-4 relative opacity-0 transition-all"
-                    :class="{ 'opacity-100': viewportIsReady }">
-                    <div class="absolute top-0 bottom-0 left-0 right-0 my-4 mx-2 md:mx-4">
-                        <div class="absolute h-0 w-full flex justify-stretch items-center gap-2 text-xs text-gray-400"
-                            v-for="(hour, index) in 24" :key="hour" :style="{ top: (100 * index / 24) + '%' }">
-
-                            <div>{{ (hour - 1).toString().padStart(2, '0') }}:00</div>
-                            <div class="w-full border-t bg-gray-200"></div>
+                <div class="w-full h-full overflow-scroll overflow-x-hidden" ref="scrollViewportRef">
+                    <!-- Scrollable -->
+                    <div class="container mx-auto w-full flex h-[1500px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
+                        :class="{ 'opacity-100': viewportIsReady }">
+                        <!-- Days viewport (tall) -->
+                        <div class="absolute top-0 bottom-0 left-0 right-0 my-4 mx-2 md:mx-4">
+                            <!-- Time indicators -->
+                            <div v-for="(hour, index) in 24"
+                                class="absolute h-0 w-full flex justify-stretch items-center gap-2 text-xs text-gray-400"
+                                :key="hour" :style="{ top: (100 * index / 24) + '%' }">
+                                <!-- Time indicator -->
+                                <div>{{ (hour - 1).toString().padStart(2, '0') }}:00</div>
+                                <div class="w-full border-t bg-gray-200"></div>
+                            </div>
                         </div>
-                    </div>
-                    <span class="flex-[0.8]"></span>
-                    <div class="flex-1 h-full relative border-r border-gray-200" :class="{ 'border-l': index == 0 }"
-                        v-for="(day, index) in thisWeek" :key="day.date.toString()">
-                        <div class="w-full h-full absolute">
-                            <div v-for="group in calendarEventsWithOverlapGroups.filter((group) => group.some((event) => isSameDay(event.start, day.date)))"
-                                :key="group[0].start.toString()">
-                                <div class="absolute left-0 right-1 md:right-2 p-1 md:px-2 md:py-2 overflow-hidden inline-flex flex-col justify-start bg-blue-500 text-white rounded-md text-xs break-all
-                            cursor-pointer hover:bg-blue-600" v-for="(event, index) in group"
-                                    :class="{ 'flex-row gap-4': eventIsShort(event), 'outline right-0 md:right-0 left-[50%]': index >= 1, 'pr-[50%]': index == 0 && group.length > 1 }"
-                                    :key="event.start.toString()" :style="{
+                        <span class="w-12 flex-shrink-0"></span>
+                        <div v-for="(day, index) in thisWeek" class="flex-1 h-full relative border-r border-gray-200"
+                            :class="{ 'border-l': index == 0 }" :key="day.date.toString()"
+                            @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
+                            @mouseup="(event) => dragTimeslotEnd(event.screenY)"
+                            @touchmove="(event) => dragTimeslotMove(event, event.touches[0] && event.touches[0].screenY, true)"
+                            @touchend="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)">
+                            <!-- Day -->
+
+                            <div class="w-full h-full absolute">
+
+                                <!-- Events -->
+                                <div v-for="group in store.eventsInOverlapGroups.filter((group) => group.some((event) => isSameDay(event.start, day.date)))"
+                                    :key="group[0].start.toString()">
+                                    <!-- Event overlap group -->
+                                    <div class="absolute left-0 right-1 md:right-2 p-1 md:px-2 md:py-2 overflow-hidden inline-flex flex-col justify-start 
+                                    bg-lime-500/80 text-gray-600 rounded-md text-xs break-all"
+                                        v-for="(event, index) in group" :class="{
+        'flex-row gap-4': isShort(event),
+        'outline outline-white bg-lime-500 right-0 md:right-0 left-[50%]': index >= 1,
+        'pr-[50%]': index == 0 && group.length > 1
+    }" :key="event.start.toString()" :style="{
         top: dateToPercentOfDay(event.start) + '%',
-        height: 'calc(' + eventDuration(event) * 100 / oneDayMs + '% - 1px)',
+        height: 'calc(' + getHeight(event) * 100 + '% - 1px)',
     }" :data-overlay-index="index" :data-overlay-group-size="group.length">
-                                    <span>{{ event.title }}</span>
-                                    <div class="hidden opacity-80 md:block">
-                                        <span v-if="!eventIsShort(event)">{{ formatTime(event.start) }} – {{
-        formatTime(event.end) }}</span>
-                                        <span v-else>{{ formatTime(event.start) }}</span>
+                                        <!-- Event -->
+                                        <span>{{ event.title }}</span>
+                                        <div class="hidden opacity-80 md:block">
+                                            <span v-if="!isShort(event)">
+                                                {{ formatTime(event.start) }} – {{ formatTime(event.end) }}
+                                            </span>
+                                            <span v-else>{{ formatTime(event.start) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- add time slot buttons -->
+                                <div class="absolute w-full h-full flex flex-col"
+                                    :class="{ 'hidden': draggingTimeslotPosition }">
+                                    <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
+                                        <!-- add time slot -->
+                                        <div v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-blue-200/80 rounded-md flex items-center justify-center
+                                    opacity-0 active:opacity-100 md:hover:opacity-100 transition-opacity"
+                                            @click="addTimeslotViaTap(day.date, hour - 1)">
+                                            <font-awesome-icon icon="plus" class="text-gray-500" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Time slots -->
+                                <div v-for="slot in store.selectedTimes.filter((slot) => isSameDay(slot.start, day.date))"
+                                    :key="slot.start.toString()" class="striped-background absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start 
+    text-white rounded-md text-xs break-all
+    active:bg-blue-600/80" :style="{ top: getTimeslotTop(slot) + '%', height: 'calc(' + getTimeslotHeight(slot) * 100 + '% - 1px)', }"
+                                    @mousedown="(event) => dragTimeslotStart(event, slot, 'both', event.screenY)">
+                                    <!-- Time slot -->
+                                    <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden ">
+                                        <div class="absolute left-0 right-0 top-3 bottom-3"
+                                            @touchstart="(event) => dragTimeslotStart(event, slot, 'both', event.touches[0] && event.touches[0].screenY)">
+                                            <!-- Center drag area for touch -->
+                                        </div>
+
+                                        <span class="transition-all" :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot }">
+                                            {{ formatTimeslotDuration(slot) }}</span>
+                                    </div>
+                                    <!-- Drag handles -->
+                                    <div class="absolute h-1 bg-white outline outline-4 cursor-pointer md:outline-2 outline-blue-400 rounded-full p-1 top-0 left-2 md:right-2 -translate-y-1/2 touch-none"
+                                        @mousedown="(event) => dragTimeslotStart(event, slot, 'start', event.screenY)"
+                                        @touchstart="(event) => dragTimeslotStart(event, slot, 'start', event.touches[0] && event.touches[0].screenY)">
+                                    </div>
+                                    <div class="absolute 1 bg-white outline outline-4 cursor-pointer md:outline-2 outline-blue-400 rounded-full p-1 bottom-0 right-2 md:left-2 translate-y-1/2 touch-none"
+                                        @mousedown="(event) => dragTimeslotStart(event, slot, 'end', event.screenY)"
+                                        @touchstart="(event) => dragTimeslotStart(event, slot, 'end', event.touches[0] && event.touches[0].screenY)">
+                                    </div>
+                                </div>
+
+                                <!-- Now indicator -->
+                                <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
+                                    :style="{ top: dateToPercentOfDay(now) + '%' }">
+                                    <!-- Dot -->
+                                    <div
+                                        class="absolute w-3 h-3 bg-gray-500 rounded-full top-1/2 -translate-x-1/2 -translate-y-1/2">
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
-                                :style="{ top: dateToPercentOfDay(now) + '%' }">
-                                <div
-                                    class="absolute w-3 h-3 bg-gray-500 rounded-full top-1/2 -translate-x-1/2 -translate-y-1/2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar / bottom bar -->
+
+            <div class="flex-shrink-0 absolute top-0 w-full h-full md:relative md:p-2 md:w-64 pointer-events-none"
+                @touchmove.passive="bottomSheetSwipeMove">
+
+                <!-- Sidebar with bg overlay -->
+                <div class="w-full h-full absolute transition-all md:hidden"
+                    :class="{ 'bg-black/40 pointer-events-auto': bottomSheetExpanded }"
+                    @click="bottomSheetExpanded = false"></div>
+
+                <!-- Sidebar -->
+                <div class="w-full absolute bottom-0 px-3 py-8 pt-0 bg-white border-t rounded-tr-2xl rounded-tl-2xl overflow-hidden
+                h-16 data-[expanded=true]:h-[80%] md:data-[expanded=true]:h-full
+                 md:overflow-y-auto md:h-full md:block md:border-0 md:border-r md:rounded-none md:pt-8 pointer-events-auto
+                    shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] z-10 transition-all" :data-expanded="bottomSheetExpanded">
+
+                    <!-- Sidebar head -->
+                    <div @click="toggleBottomSheet" @touchstart="bottomSheetSwipeStart"
+                        class="w-full py-4 md:pt-0 flex flex-col items-center gap-4">
+                        <div class="h-1 bg-slate-400 rounded-md w-12 md:hidden"></div> <!-- Drag-bar -->
+                        <p class="text-xl text-slate-600">Your Event</p>
+                    </div>
+
+                    <div class="h-full overflow-auto md:overflow-hidden">
+                        <label class="text-gray-500 mt-4">Title</label>
+                        <input type="text" v-model="store.eventTitle" name="title" maxlength="100"
+                            class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
+                            placeholder="Event title (optional)" :required="false" />
+
+                        <!-- Timeslots by day -->
+                        <p class="text-gray-500 mt-4">Selected times</p>
+                        <div class="flex flex-col gap-2 mt-2 text-sm">
+                            <p v-if="store.selectedTimes.length == 0" class="text-gray-500">No times selected yet</p>
+                            <div v-for="slots in store.selectedTimesByDay"
+                                class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
+                                <p class="text-slate-600 px-2">{{ formatSelectedTimesDay(slots.day) }}</p>
+                                <div class="text-slate-500 flex justify-between pr-2 hover:bg-slate-500/10 px-2"
+                                    v-for="slot in slots.timeslots">
+                                    <span>{{ formatSelectedTimeslotTime(slot) }}</span>
+                                    <button class="rounded-full hover:bg-slate-500/20 h-6 w-6"
+                                        @click="() => removeTimeslot(slots.day, slot)"><font-awesome-icon
+                                            icon="times" /></button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </NewMeetingWrapper>
 </template>
+
+<style>
+.striped-background {
+    background: repeating-linear-gradient(45deg, #2585e9ba, #2585e9ba 10px, #2585e9 10px, #2585e9 20px);
+}
+</style>
