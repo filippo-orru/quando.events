@@ -9,6 +9,7 @@ export interface CalendarTimeslot {
 }
 
 export interface CalendarEntry extends CalendarTimeslot {
+    id: String;
     title: string;
 };
 
@@ -25,7 +26,7 @@ export function isShort(slot: CalendarTimeslot) {
 }
 
 
-function dateIsBetween(date: Date, start: Date, end: Date) {
+export function dateIsBetween(date: Date, start: Date, end: Date) {
     return date.getTime() > start.getTime() && date.getTime() < end.getTime();
 }
 
@@ -39,7 +40,6 @@ interface NewMeetingStore {
     name: string;
     eventTitle: string;
     selectedTimes: CalendarTimeslot[];
-    events: CalendarEntry[];
 }
 
 export const useNewMeetingStore = defineStore('newMeetingStore', {
@@ -72,22 +72,6 @@ export const useNewMeetingStore = defineStore('newMeetingStore', {
     },
 
     getters: {
-        eventsInOverlapGroups: (state) => {
-            let overlapGroups: Array<Array<CalendarEntry>> = [];
-            for (let event of state.events) {
-                let overlapGroup = overlapGroups.find((group) =>
-                    group.some((otherEvent) =>
-                        dateIsBetween(event.start, otherEvent.start, otherEvent.end) || dateIsBetween(event.end, otherEvent.start, otherEvent.end)
-                    )
-                );
-                if (overlapGroup) {
-                    overlapGroup.push(event);
-                } else {
-                    overlapGroups.push([event]);
-                }
-            }
-            return overlapGroups;
-        },
         selectedTimesByDay: (state) => {
             interface CalendarTimeslotByDay {
                 day: Date;
@@ -124,25 +108,16 @@ export const useNewMeetingStore = defineStore('newMeetingStore', {
                         start: timeslot.start.getTime(),
                         end: timeslot.end.getTime(),
                     })),
-                    events: v.events.map((event: CalendarEntry) => ({
-                        start: event.start.getTime(),
-                        end: event.end.getTime(),
-                        title: event.title,
-                    })),
+                    
                 });
             },
             deserialize: (value: string) => {
                 // Convert timestamps to dates
-                let raw = JSON.parse(value);
+                let parsed = JSON.parse(value);
                 return {
-                    name: raw.name,
-                    eventTitle: raw.eventTitle,
-                    events: raw.events.map((event: { start: number, end: number, title: string }) => ({
-                        start: new Date(event.start),
-                        end: new Date(event.end),
-                        title: event.title,
-                    })),
-                    selectedTimes: raw.selectedTimes.map((timeslot: { start: number, end: number }) => ({
+                    name: parsed.name,
+                    eventTitle: parsed.eventTitle,
+                    selectedTimes: parsed.selectedTimes.map((timeslot: { start: number, end: number }) => ({
                         start: new Date(timeslot.start),
                         end: new Date(timeslot.end),
                     })),

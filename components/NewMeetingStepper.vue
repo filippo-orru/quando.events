@@ -8,7 +8,7 @@ const props = defineProps<{
 </script>
 
 <template>
-    <div class="w-max-screen bg-white p-4 shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] z-50">
+    <div class="w-max-screen bg-white p-4 shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] z-20">
         <div class="flex flex-row justify-center items-center gap-x-16">
             <div v-for="step in NewMeetingSteps">
                 <NuxtLink :to="step.link" class="flex flex-row items-center">

@@ -4,6 +4,7 @@ import { NewMeetingSteps } from '~/data/NewMeeting';
 import { getStartOfTheWeek, getHeight, isShort, type CalendarTimeslot } from "~/stores/newMeetingStore";
 
 let store = useNewMeetingStore();
+let importedEvents = useImportedCalendarEventsStore();
 
 let now = useState('today', () => new Date());
 function updateToday() {
@@ -202,9 +203,7 @@ function nextBrand() {
     currentBrand.value = (currentBrand.value + 1) % brands.length;
 }
 
-function showImportEventsDialog() {
-
-}
+let showImportEventsDialog = useState('showImportEventsDialog', () => false);
 
 type DragTimeslotWhich = 'start' | 'end' | 'both';
 type DragTimeslot = {
@@ -354,7 +353,7 @@ onUnmounted(() => {
                 <div class="w-full pt-4 pb-2">
                     <!-- Calendar header -->
                     <div class="mb-4 flex items-center justify-start gap-4 px-4 text-slate-500">
-                        <div class="flex flex-row-reverse">
+                        <div class="flex flex-row-reverse md:flex-row">
                             <!-- Today button, left / right chevrons to navigate weeks, current month -->
                             <button
                                 class="mr-4 flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
@@ -392,7 +391,7 @@ onUnmounted(() => {
                         <!-- Import button -->
                         <button
                             class="ml-auto flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
-                            @click="showImportEventsDialog">
+                            @click="showImportEventsDialog = true">
                             <Transition mode="out-in" name="fade">
                                 <font-awesome-icon :key="currentBrand" :icon="'fa-brands fa-' + brands[currentBrand]"
                                     class="w-4 mr-2" />
@@ -427,7 +426,7 @@ onUnmounted(() => {
                     <!-- Scrollable -->
                     <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
                         <div :key="currentWeek.getTime()"
-                            class="container mx-auto w-full flex h-[1500px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
+                            class="container mx-auto w-full flex h-[1300px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
                             :class="{ 'opacity-100': viewportIsReady }" @touchstart="weekSwipeStart"
                             @touchmove="weekSwipeMove">
                             <!-- Days viewport (tall) -->
@@ -454,7 +453,7 @@ onUnmounted(() => {
                                 <div class="w-full h-full absolute">
 
                                     <!-- Events -->
-                                    <div v-for="group in store.eventsInOverlapGroups.filter((group) => group.some((event) => isSameDay(event.start, day.date)))"
+                                    <div v-for="group in importedEvents.eventsInOverlapGroups.filter((group) => group.some((event) => isSameDay(event.start, day.date)))"
                                         :key="group[0].start.toString()">
                                         <!-- Event overlap group -->
                                         <div class="absolute left-0 right-1 md:right-2 p-1 md:px-2 md:py-2 overflow-hidden inline-flex flex-col justify-start 
@@ -607,6 +606,8 @@ onUnmounted(() => {
 
             </div>
         </div>
+
+        <CalendarImportDialog :isOpen="showImportEventsDialog" :closeModal="() => showImportEventsDialog = false" />
     </NewMeetingWrapper>
 </template>
 
