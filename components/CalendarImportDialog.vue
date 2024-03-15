@@ -57,7 +57,7 @@ store.init();
                                         class="mr-3" />
                                     Google Calendar
                                 </button>
-                                <button type="button"
+                                <!-- <button type="button"
                                     class="flex items-center justify-center rounded-md border border-transparent bg-sky-100 text-blue-900/80 hover:bg-sky-200/80 px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                                     <font-awesome-icon :icon="['fab', 'microsoft']" class="mr-3" />
                                     Outlook
@@ -70,7 +70,8 @@ store.init();
                                 <button
                                     class="flex items-center justify-center rounded-md border border-transparent text-blue-900/80 hover:bg-sky-100 px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                                     I use another calendar
-                                </button>
+                                </button> -->
+                                <p class="text-xs text-gray-500">Other calendar integrations coming soon.</p>
 
                             </div>
 

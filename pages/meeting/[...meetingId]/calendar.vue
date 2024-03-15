@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration } from "date-fns";
-import { NewMeetingSteps } from '~/data/NewMeeting';
-import { getStartOfTheWeek, getHeight, isShort, type CalendarTimeslot } from "~/stores/newMeetingStore";
+import { NewMeetingSteps, type CalendarTimeslot } from '~/data/Meeting';
+import { getStartOfTheWeek, getHeight, isShort } from "~/stores/NewMeetingStore";
 
-let store = useNewMeetingStore();
+
+let meetingId = useRoute().params.meetingId as string;
+if (!meetingId) {
+    throw new Error("No meeting ID provided");
+}
+let newMeetingStore = useNewMeetingStore(meetingId);
 let importedEvents = useImportedCalendarEventsStore();
 
 let now = useState('today', () => new Date());
@@ -88,7 +93,7 @@ function showAddTimeslotButtonFor(day: Date, hour: number) {
         start: addHours(day, hour),
         end: addHours(day, hour + 1),
     };
-    return store.selectedTimes.every((slot2) => timeslotsOverlap(timeslot, slot2) in [Overlap.None, Overlap.Touch]);
+    return newMeetingStore.selectedTimes.every((slot2) => timeslotsOverlap(timeslot, slot2) in [Overlap.None, Overlap.Touch]);
 }
 
 enum Overlap {
@@ -111,7 +116,7 @@ function timeslotsOverlap(slot1: CalendarTimeslot, slot2: CalendarTimeslot): Ove
 
 function mergeOverlappingTimeslots() {
     let allOk = false;
-    let list = store.selectedTimes;
+    let list = newMeetingStore.selectedTimes;
     while (!allOk) {
         allOk = true;
 
@@ -143,13 +148,14 @@ function mergeOverlappingTimeslots() {
             }
         }
     }
-    store.selectedTimes = list;
+    newMeetingStore.selectedTimes = list;
+    newMeetingStore.save();
 }
 
 function addTimeslotViaTap(day: Date, hour: number) {
     // Delay for a bit to allow the user to see the button press
     setTimeout(() => {
-        store.selectedTimes.push({
+        newMeetingStore.selectedTimes.push({
             start: addHours(day, hour),
             end: addHours(day, hour + 1),
         });
@@ -168,7 +174,8 @@ function formatSelectedTimeslotTime(slot: CalendarTimeslot) {
 }
 
 function removeTimeslot(day: Date, slot: CalendarTimeslot) {
-    store.selectedTimes = store.selectedTimes.filter((s) => s.start != slot.start);
+    newMeetingStore.selectedTimes = newMeetingStore.selectedTimes.filter((s) => s.start != slot.start);
+    newMeetingStore.save();
 }
 
 let bottomSheetExpanded: Ref<boolean> = useState('bottomSheetExpanded', () => false);
@@ -491,7 +498,7 @@ onUnmounted(() => {
                                     </div>
 
                                     <!-- Time slots -->
-                                    <div v-for="slot in  store.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
+                                    <div v-for="slot in  newMeetingStore.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
                                         :key="slot.start.toString()"
                                         class="
                                     bg-blue-500 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all group"
@@ -579,16 +586,16 @@ onUnmounted(() => {
                     <div class="h-full overflow-auto">
                         <div class=" pb-8">
                             <label class="text-gray-500 mt-4">Title</label>
-                            <input type="text" v-model="store.eventTitle" name="title" maxlength="100"
+                            <input type="text" v-model="newMeetingStore.meetingTitle" name="title" maxlength="100"
                                 class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
                                 placeholder="Event title (optional)" :required="false" />
 
                             <!-- Timeslots by day -->
                             <p class="text-gray-500 mt-4">Selected times</p>
                             <div class="flex flex-col gap-2 mt-2 text-sm">
-                                <p v-if="store.selectedTimes.length == 0" class="text-gray-500">No times selected yet
+                                <p v-if="newMeetingStore.selectedTimes.length == 0" class="text-gray-500">No times selected yet
                                 </p>
-                                <div v-for=" slots  in  store.selectedTimesByDay "
+                                <div v-for=" slots  in  newMeetingStore.selectedTimesByDay "
                                     class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
                                     <p class="text-slate-600 px-2">{{ formatSelectedTimesDay(slots.day) }}</p>
                                     <div class="text-slate-500 flex justify-between pr-2 hover:bg-slate-500/10 px-2"
@@ -650,3 +657,4 @@ onUnmounted(() => {
     opacity: 0;
 }
 </style>
+~/data/Meeting

@@ -1,5 +1,6 @@
 import { useScriptTag } from '@vueuse/core';
 import { defineStore } from 'pinia'
+import type { CalendarEntry } from '~/data/Meeting';
 
 type GoogleCalendarStore = {
   token: google.accounts.oauth2.TokenResponse | null;
@@ -11,7 +12,6 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
   state: () => {
     return {
       token: null,
-      tokenClient: null as google.accounts.oauth2.TokenClient | null,
       isReady: false,
     } as GoogleCalendarStore;
   },

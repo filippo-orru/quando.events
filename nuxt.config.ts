@@ -28,5 +28,19 @@ export default defineNuxtConfig({
       },
     },
   },
+  nitro: {
+    storage: {
+      "redis:users": {
+        driver: 'redis',
+        host: '127.0.0.1',
+        port: 6379,
+      },
+      "redis:meetings": {
+        driver: 'redis',
+        host: '127.0.0.1',
+        port: 6379,
+      },
+    },
+  },
 });
 

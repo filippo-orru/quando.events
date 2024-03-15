@@ -1,3 +1,17 @@
+export interface CalendarTimeslot {
+    start: Date;
+    end: Date;
+}
+
+export interface CalendarTimeslotSerialized {
+    start: number;
+    end: number;
+}
+
+export interface CalendarEntry extends CalendarTimeslot {
+    id: String;
+    title: string;
+};
 
 export type NewMeetingStep = {
     step: StepEnum;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NewMeetingSteps } from '~/data/NewMeeting';
+import { NewMeetingSteps } from '~/data/Meeting';
 </script>
 
 <template>
@@ -9,3 +9,4 @@ import { NewMeetingSteps } from '~/data/NewMeeting';
         </section>
     </NewMeetingWrapper>
 </template>
+~/data/Meeting

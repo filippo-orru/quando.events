@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { NewMeetingStep } from '~/data/NewMeeting';
+import type { NewMeetingStep } from '~/data/Meeting';
 
 defineProps<{
     step: NewMeetingStep,
@@ -7,6 +7,10 @@ defineProps<{
     padding?: boolean,
     buttonClass?: string
 }>();
+
+let userStore = useUserInfoStore();
+
+userStore.init();
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NewMeetingSteps, type NewMeetingStep } from '~/data/NewMeeting';
+import { NewMeetingSteps, type NewMeetingStep } from '~/data/Meeting';
 
 const props = defineProps<{
     step: NewMeetingStep

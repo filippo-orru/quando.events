@@ -1,17 +1,10 @@
+import { useDebounceFn } from '@vueuse/core';
 import { add, intervalToDuration, isMonday, previousMonday, set } from 'date-fns';
 import { defineStore } from 'pinia'
+import type { CalendarEntry, CalendarTimeslot } from '~/data/Meeting';
+import type { UpdateMeeting } from '~/server/api/meetings/[...meetingId]/index.patch';
 
 const oneDayMs = 24 * 60 * 60 * 1000;
-
-export interface CalendarTimeslot {
-    start: Date;
-    end: Date;
-}
-
-export interface CalendarEntry extends CalendarTimeslot {
-    id: String;
-    title: string;
-};
 
 export function getHeight(timeSlot: CalendarTimeslot) {
     return eventDuration(timeSlot) / oneDayMs;
@@ -37,12 +30,13 @@ export function getStartOfTheWeek(from: Date) {
 }
 
 interface NewMeetingStore {
-    name: string;
-    eventTitle: string;
+    id: string;
+    meetingTitle: string;
     selectedTimes: CalendarTimeslot[];
+    events: CalendarEntry[];
 }
 
-export const useNewMeetingStore = defineStore('newMeetingStore', {
+const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${meetingId}`, {
     state: () => {
         // Random events
         // let events = [...Array(5 + Math.floor(Math.random() * 5))].map((_, index) => {
@@ -64,8 +58,8 @@ export const useNewMeetingStore = defineStore('newMeetingStore', {
         ] as CalendarEntry[];
 
         return {
-            name: '',
-            eventTitle: '',
+            id: meetingId,
+            meetingTitle: '',
             selectedTimes: [] as CalendarTimeslot[],
             events: events as CalendarEntry[],
         } as NewMeetingStore;
@@ -94,6 +88,9 @@ export const useNewMeetingStore = defineStore('newMeetingStore', {
     },
 
     actions: {
+        save() {
+            saveMeeting(this);
+        }
     },
 
     persist: {
@@ -102,20 +99,18 @@ export const useNewMeetingStore = defineStore('newMeetingStore', {
                 let v = value as NewMeetingStore;
                 // Convert dates to timestamps
                 return JSON.stringify({
-                    name: v.name,
-                    eventTitle: v.eventTitle,
+                    eventTitle: v.meetingTitle,
                     selectedTimes: v.selectedTimes.map((timeslot: CalendarTimeslot) => ({
                         start: timeslot.start.getTime(),
                         end: timeslot.end.getTime(),
                     })),
-                    
+
                 });
             },
             deserialize: (value: string) => {
                 // Convert timestamps to dates
                 let parsed = JSON.parse(value);
                 return {
-                    name: parsed.name,
                     eventTitle: parsed.eventTitle,
                     selectedTimes: parsed.selectedTimes.map((timeslot: { start: number, end: number }) => ({
                         start: new Date(timeslot.start),
@@ -126,3 +121,27 @@ export const useNewMeetingStore = defineStore('newMeetingStore', {
         },
     }
 })
+
+export const useNewMeetingStore = (meetingId: string) => newMeetingStore(meetingId)();
+
+const saveMeeting = useDebounceFn(async (store: NewMeetingStore) => {
+    // Save the selected times to the server
+    let response = await $fetch(`/api/meetings/${store.id}`,
+        {
+            method: 'PATCH',
+            headers: {
+                'Authorization' : 
+            },
+            body: {
+                title: store.meetingTitle,
+                selectedTimes: store.selectedTimes.map((timeslot: CalendarTimeslot) => ({
+                    start: timeslot.start.getTime(),
+                    end: timeslot.end.getTime(),
+                })),
+            } as UpdateMeeting,
+        });
+
+    // if (response.id !== 200) {
+    //     console.error('Failed to save meeting');
+    // }
+}, 100);

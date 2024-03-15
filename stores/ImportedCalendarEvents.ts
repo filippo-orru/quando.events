@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { dateIsBetween, type CalendarEntry } from './newMeetingStore'
+import { dateIsBetween } from './NewMeetingStore'
+import type { CalendarEntry } from '~/data/Meeting';
 
 type ImportedCalendarEventsStore = {
   events: CalendarEntry[];
