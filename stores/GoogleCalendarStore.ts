@@ -80,6 +80,10 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
       }
     },
     tokenClient: () => googleTokenClient,
+    isConnected: (store) => {
+      console.log("connected?", store.token)
+      return store.token !== null;
+    }
   },
   persist: {
     serializer: {

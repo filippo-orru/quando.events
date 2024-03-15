@@ -32,7 +32,7 @@ export function getStartOfTheWeek(from: Date) {
 
 interface NewMeetingStore {
     meetingId: string;
-    data: MeetingData | null;
+    data: MeetingData | null | 'error';
 }
 
 export type MeetingData = {
@@ -81,20 +81,25 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
         async fetchUpdate() {
             let userStore = useUserInfoStore();
             // Fetch the meeting from the server
-            let meeting = await ApiClient.i.getMeeting(this.meetingId);
-            if (meeting) {
-                this.data = {
-                    title: meeting.title,
-                    members: meeting.members.filter((member) => member.id !== userStore.id),
-                    selectedTimes: this.data?.selectedTimes || [],
+            try {
+                let meeting = await ApiClient.i.getMeeting(this.meetingId);
+                if (meeting) {
+                    let myMember = meeting.members.find((member) => member.id === userStore.id);
+                    this.data = {
+                        title: meeting.title,
+                        members: meeting.members.filter((member) => member.id !== userStore.id),
+                        selectedTimes: myMember && myMember.times || []
+                    }
                 }
+            } catch (e) {
+                console.error(e);
+                this.data = 'error';
             }
         },
         save() {
-            if (!this.data) {
-                return;
+            if (this.data && typeof this.data === 'object') { // Hack
+                saveMeeting(this.meetingId, this.data);
             }
-            saveMeeting(this.meetingId, this.data);
         }
     },
 

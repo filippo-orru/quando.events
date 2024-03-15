@@ -34,7 +34,7 @@ export function deserializeMeeting(meeting: MeetingSerialized): Meeting {
             return {
                 id: member.id,
                 name: member.name,
-                times: member.times.map(deserializeCalendarTimeslot),
+                times: member.times.map((time) => deserializeCalendarTimeslot(time)),
             } as MeetingMember;
         }),
     };
@@ -53,6 +53,7 @@ export function deserializeCalendarTimeslot(slot: CalendarTimeslotSerialized): C
 }
 
 export function serializeCalendarTimeslot(slot: CalendarTimeslot): CalendarTimeslotSerialized {
+    console.log(slot)
     return {
         start: slot.start.getTime(),
         end: slot.end.getTime(),

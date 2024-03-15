@@ -3,9 +3,11 @@ import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHo
 import { type CalendarTimeslot } from '~/data/Meeting';
 import type { NewMeetingProps } from "~/stores/NewMeetingStore";
 
-const props = defineProps<{props: NewMeetingProps}>();
+const props = defineProps<{ props: NewMeetingProps }>();
 let meetingProps = props.props;
 let meetingData = meetingProps.data;
+
+let userInfo = useUserInfoStore();
 
 let importedEvents = useImportedCalendarEventsStore();
 
@@ -15,6 +17,7 @@ function updateToday() {
 }
 let updateTodayTimer: NodeJS.Timeout;
 
+// Todo use websocket
 function updateMeetingInfo() {
   meetingProps.fetchUpdate();
 }
@@ -206,7 +209,7 @@ function bottomSheetSwipeMove(event: TouchEvent) {
   }
 }
 
-let brands = ['google', 'microsoft', 'apple'];
+let brands = ['google']; // , 'microsoft', 'apple'
 let currentBrand = useState('currentBrand', () => 0);
 let nextBrandTimer: NodeJS.Timeout;
 function nextBrand() {
@@ -331,14 +334,14 @@ function scrollToNow() {
   scrollViewportRef.value!.scrollTo({ top: top });
 }
 
-function selectedTimesByDay() {
+function getTimeslotsByDay(slots: CalendarTimeslot[]) {
   interface CalendarTimeslotByDay {
     day: Date;
     timeslots: CalendarTimeslot[];
   }
 
   let selectedTimesByDay: { [date: number]: CalendarTimeslotByDay } = {};
-  for (let timeslot of meetingProps.data.selectedTimes) {
+  for (let timeslot of slots) {
     let s = timeslot.start;
     let day = new Date(s.getFullYear(), s.getMonth(), s.getDate());
     let dayRaw = day.getTime();
@@ -470,7 +473,7 @@ onUnmounted(() => {
               </div>
             </div>
             <span class="w-12 flex-shrink-0"></span>
-            <div v-for="(day, index) in  getDaysOfWeek(currentWeek) "
+            <div v-for="(day, index) in   getDaysOfWeek(currentWeek)  "
               class="flex-1 h-full relative border-r border-gray-200" :class="{ 'border-l': index == 0 }"
               :key="day.date.toString()" @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
               @mouseup="(event) => dragTimeslotEnd(event.screenY)"
@@ -521,8 +524,7 @@ onUnmounted(() => {
                 <!-- Time slots -->
                 <div v-for="slot in  meetingData.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
                   :key="slot.start.toString()"
-                  class="
-                                    bg-blue-500 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all group"
+                  class="bg-blue-500 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all group"
                   :style="{
                 '-webkit-touch-callout': 'none', top: getTimeslotTop(slot) + '%', height: 'calc('
                   + getTimeslotHeight(slot) * 100 + '% - 1px)',
@@ -566,6 +568,21 @@ onUnmounted(() => {
                   </div>
                 </div>
 
+                <div v-for="member in  meetingData.members " class="w-full h-full absolute">
+                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  "
+                    class="bg-lime-600 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
+                    py-2 px-1 md:px-2 md:py-2 overflow-hidden"
+                    :style="{
+                top: getTimeslotTop(slot) + '%', height: 'calc('
+                  + getTimeslotHeight(slot) * 100 + '% - 1px)',
+              }">
+                    <span class="transition-all"
+                      :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
+                      {{ member.name }}</span>
+                  </div>
+                </div>
+
+
                 <!-- Now indicator -->
                 <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
                   :style="{ top: dateToPercentOfDay(now) + '%' }">
@@ -607,8 +624,8 @@ onUnmounted(() => {
         <div class="h-full overflow-auto">
           <div class=" pb-8">
             <label class="text-gray-500 mt-4">Title</label>
-            <input type="text" v-model="meetingData.title" @input="(_) => meetingProps.saveMeetingData()" name="title"
-              maxlength="100"
+            <input type="text" v-model="meetingData.title" @input="(_) => meetingProps.saveMeetingData()"
+              name="title" maxlength="100"
               class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
               placeholder="Event title (optional)" :required="false" />
 
@@ -618,13 +635,28 @@ onUnmounted(() => {
               <p v-if="meetingData.selectedTimes.length == 0" class="text-gray-500">No times
                 selected yet
               </p>
-              <div v-for=" slots in selectedTimesByDay()" class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
+              <div v-for="  slots  in  getTimeslotsByDay(meetingData.selectedTimes) "
+                class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
                 <p class="text-slate-600 px-2">{{ formatSelectedTimesDay(slots.day) }}</p>
                 <div class="text-slate-500 flex justify-between pr-2 hover:bg-slate-500/10 px-2"
-                  v-for=" slot  in  slots.timeslots ">
+                  v-for="  slot   in   slots.timeslots  ">
                   <span>{{ formatTime(slot.start) }} – {{ formatTime(slot.end) }}</span>
                   <button class="rounded-full hover:bg-slate-500/20 h-6 w-6"
                     @click="() => removeTimeslot(slots.day, slot)"><font-awesome-icon icon="times" /></button>
+                </div>
+              </div>
+
+              <div v-for="  member  in  meetingData.members ">
+                <p class="text-gray-500 mt-4">{{ member.name }}</p>
+                <div v-for="  slots  in  getTimeslotsByDay(member.times) "
+                  class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
+                  <p class="text-slate-600 px-2">{{ formatSelectedTimesDay(slots.day) }}</p>
+                  <div class="text-slate-500 flex justify-between pr-2 hover:bg-slate-500/10 px-2"
+                    v-for="  slot   in   slots.timeslots  ">
+                    <span>{{ formatTime(slot.start) }} – {{ formatTime(slot.end) }}</span>
+                    <button class="rounded-full hover:bg-slate-500/20 h-6 w-6"
+                      @click="() => removeTimeslot(slots.day, slot)"><font-awesome-icon icon="times" /></button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -634,12 +666,15 @@ onUnmounted(() => {
 
     </div>
   </div>
-  <NuxtLink to="/meeting/[...meetingId]/invite" class="absolute right-10 bg-blue-600 rounded-full w-12 h-12 mt-auto flex items-center justify-center cursor-pointer shadow-xl
-                hover:bg-blue-500 bottom-24 md:bottom-10">
-    <font-awesome-icon icon="arrow-right" class="text-white" />
+  <NuxtLink :to="`/meeting/${meetingProps.meetingId}/invite`" class="absolute right-10 bg-blue-600 rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
+  text-white hover:bg-blue-500 bottom-24 md:bottom-10 flex gap-4">
+    Invite others
+    <font-awesome-icon icon="user-plus" class="" />
   </NuxtLink>
 
   <CalendarImportDialog :isOpen="showImportEventsDialog" :closeModal="() => showImportEventsDialog = false" />
+
+  <SetNameDialog />
 </template>
 
 <style>

@@ -1,4 +1,4 @@
-import { CalendarTimeslot } from "~/data/Meeting";
+import { CalendarTimeslot, CalendarTimeslotSerialized, MeetingMemberSerialized, MeetingSerialized } from "~/data/Meeting";
 import { randomIdChars } from "./db_utils";
 import { UpdateMeeting } from "~/server/api/meetings/[...meetingId]/index.patch";
 import { useUserInfoStore as useUserStore } from "~/stores/UserInfo";
@@ -12,7 +12,7 @@ type DbMeeting = {
 };
 
 type DbMeetingParticipant = {
-    times: CalendarTimeslot[];
+    times: CalendarTimeslotSerialized[];
 };
 
 const meetingStorage = useStorage<DbMeeting>('redis:meetings');
@@ -42,20 +42,20 @@ export async function createMeeting() {
     return meeting.id;
 }
 
-export async function getMeeting(id: string): Promise<Meeting | null> {
+export async function getMeeting(id: string): Promise<MeetingSerialized | null> {
     let dbMeeting = await meetingStorage.getItem(id);
     if (!dbMeeting) {
         return null;
     }
 
-    let members = [] as MeetingMember[];
-    for (let [userId, participant] of Object.entries(dbMeeting.members)) {
+    let members = [] as MeetingMemberSerialized[];
+    for (let [userId, member] of Object.entries(dbMeeting.members)) {
         let user = await getUserById(userId);
         if (user) {
             members.push({
                 id: userId,
                 name: user.name || 'Unknown',
-                times: participant.times,
+                times: member.times,
             });
         }
     }
@@ -74,13 +74,8 @@ export async function updateMeeting(meetingId: string, userId: string, update: U
         meeting.title = update.title || meeting.title;
         if (update.selectedTimes) {
             meeting.members[userId] = {
-                times: update.selectedTimes.map((slot) => {
-                    return {
-                        start: new Date(slot.start),
-                        end: new Date(slot.end),
-                    } as CalendarTimeslot;
-                }),
-            };
+                times: update.selectedTimes
+            } as DbMeetingParticipant;
         }
         await meetingStorage.setItem(meetingId, meeting);
         return meeting;

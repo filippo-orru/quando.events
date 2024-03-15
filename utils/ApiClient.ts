@@ -1,5 +1,4 @@
-import type { Store } from "@pinia/nuxt/dist/runtime/composables";
-import { deserializeCalendarTimeslot, deserializeMeeting } from "~/data/Meeting";
+import { deserializeMeeting } from "~/data/Meeting";
 import type { LocalAccessToken } from "~/server/api/auth/register.post";
 import type { UpdateMeeting } from "~/server/api/meetings/[...meetingId]/index.patch";
 import type { Meeting } from "~/server/utils/db/meetings";

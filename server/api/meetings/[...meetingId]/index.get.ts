@@ -1,10 +1,10 @@
-import { MeetingMemberSerialized, MeetingSerialized, serializeCalendarTimeslot, serializeMeeting } from "~/data/Meeting";
-import { Meeting, MeetingMember, getMeeting } from "~/server/utils/db/meetings";
+import { MeetingSerialized, serializeMeeting } from "~/data/Meeting";
+import { Meeting, getMeeting } from "~/server/utils/db/meetings";
 
 
 export default defineEventHandler(async (event) => {
     let id = event.context.params!.meetingId;
-    let meeting: Meeting | null = await getMeeting(id);
+    let meeting: MeetingSerialized | null = await getMeeting(id);
     if (!meeting) {
         return sendError(event, {
             message: "Meeting not found",
@@ -14,5 +14,5 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log(meeting);
-    return serializeMeeting(meeting);
+    return meeting;
 });
