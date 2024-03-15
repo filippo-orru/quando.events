@@ -8,7 +8,7 @@ import { getUserById } from "./users";
 type DbMeeting = {
     id: string;
     title: string;
-    participants: { [userId: string]: DbMeetingParticipant };
+    members: { [userId: string]: DbMeetingParticipant };
 };
 
 type DbMeetingParticipant = {
@@ -36,23 +36,23 @@ export async function createMeeting() {
     let meeting = {
         id: generateMeetingId(),
         title: '',
-        participants: {},
+        members: {},
     } as DbMeeting;
     await meetingStorage.setItem(meeting.id, meeting);
     return meeting.id;
 }
 
-export async function getMeeting(id: string) {
+export async function getMeeting(id: string): Promise<Meeting | null> {
     let dbMeeting = await meetingStorage.getItem(id);
     if (!dbMeeting) {
         return null;
     }
 
-    let participants = [] as MeetingParticipant[];
-    for (let [userId, participant] of Object.entries(dbMeeting.participants)) {
+    let members = [] as MeetingMember[];
+    for (let [userId, participant] of Object.entries(dbMeeting.members)) {
         let user = await getUserById(userId);
         if (user) {
-            participants.push({
+            members.push({
                 id: userId,
                 name: user.name || 'Unknown',
                 times: participant.times,
@@ -61,9 +61,10 @@ export async function getMeeting(id: string) {
     }
 
     return {
-        ...dbMeeting,
-        members: participants,
-    } as Meeting;
+        id: dbMeeting.id,
+        title: dbMeeting.title,
+        members: members,
+    };
 }
 
 export async function updateMeeting(meetingId: string, userId: string, update: UpdateMeeting) {
@@ -72,7 +73,7 @@ export async function updateMeeting(meetingId: string, userId: string, update: U
     if (meeting) {
         meeting.title = update.title || meeting.title;
         if (update.selectedTimes) {
-            meeting.participants[userId] = {
+            meeting.members[userId] = {
                 times: update.selectedTimes.map((slot) => {
                     return {
                         start: new Date(slot.start),
@@ -90,10 +91,10 @@ export async function updateMeeting(meetingId: string, userId: string, update: U
 export type Meeting = {
     id: string;
     title: string;
-    members: MeetingParticipant[];
+    members: MeetingMember[];
 };
 
-export type MeetingParticipant = {
+export type MeetingMember = {
     id: string;
     name: string;
     times: CalendarTimeslot[];

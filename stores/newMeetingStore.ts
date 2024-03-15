@@ -3,7 +3,7 @@ import { add, intervalToDuration, isMonday, previousMonday, set } from 'date-fns
 import { defineStore } from 'pinia'
 import type { CalendarEntry, CalendarTimeslot } from '~/data/Meeting';
 import type { UpdateMeeting } from '~/server/api/meetings/[...meetingId]/index.patch';
-import type { MeetingParticipant } from '~/server/utils/db/meetings';
+import type { MeetingMember } from '~/server/utils/db/meetings';
 
 const oneDayMs = 24 * 60 * 60 * 1000;
 
@@ -38,8 +38,17 @@ interface NewMeetingStore {
 export type MeetingData = {
     title: string;
     selectedTimes: CalendarTimeslot[];
-    members: MeetingParticipant[];
+    members: MeetingMember[];
 }
+
+export type NewMeetingProps = {
+    meetingId: string;
+    data: MeetingData;
+
+
+    fetchUpdate: () => Promise<void>;
+    saveMeetingData: () => Promise<void>;
+};
 
 const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${meetingId}`, {
     state: () => {
@@ -90,28 +99,6 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
     },
 
     getters: {
-        selectedTimesByDay: (state) => {
-            if (!state.data) {
-                return {};
-            }
-            interface CalendarTimeslotByDay {
-                day: Date;
-                timeslots: CalendarTimeslot[];
-            }
-
-            let selectedTimesByDay: { [date: number]: CalendarTimeslotByDay } = {};
-            for (let timeslot of state.data.selectedTimes) {
-                let s = timeslot.start;
-                let day = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-                let dayRaw = day.getTime();
-                if (selectedTimesByDay[dayRaw]) {
-                    selectedTimesByDay[dayRaw].timeslots.push(timeslot);
-                } else {
-                    selectedTimesByDay[dayRaw] = { day: day, timeslots: [timeslot] };
-                }
-            }
-            return selectedTimesByDay;
-        },
     },
 })
 

@@ -1,4 +1,6 @@
-import { Meeting, getMeeting } from "~/server/utils/db/meetings";
+import { MeetingMemberSerialized, MeetingSerialized, serializeCalendarTimeslot, serializeMeeting } from "~/data/Meeting";
+import { Meeting, MeetingMember, getMeeting } from "~/server/utils/db/meetings";
+
 
 export default defineEventHandler(async (event) => {
     let id = event.context.params!.meetingId;
@@ -11,5 +13,6 @@ export default defineEventHandler(async (event) => {
         });
     }
 
-    return meeting;
+    console.log(meeting);
+    return serializeMeeting(meeting);
 });

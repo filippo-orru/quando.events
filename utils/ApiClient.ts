@@ -1,6 +1,8 @@
 import type { Store } from "@pinia/nuxt/dist/runtime/composables";
+import { deserializeCalendarTimeslot, deserializeMeeting } from "~/data/Meeting";
 import type { LocalAccessToken } from "~/server/api/auth/register.post";
 import type { UpdateMeeting } from "~/server/api/meetings/[...meetingId]/index.patch";
+import type { Meeting } from "~/server/utils/db/meetings";
 
 /** Stores and persists access token. */
 class TokenStore {
@@ -72,10 +74,12 @@ export class ApiClient {
     // TODO if unauthorized, clear token
   }
 
-  async getMeeting(id: string) {
-    return await $fetch(`/api/meetings/${id}`, {
+  async getMeeting(id: string): Promise<Meeting> {
+    let meeting = await $fetch(`/api/meetings/${id}`, {
       headers: await this.getHeaders(),
     });
+
+    return deserializeMeeting(meeting);
   }
 
   async updateUser(body: { name: string | null, email: string | null }) {
