@@ -1,37 +1,32 @@
 import { useDebounceFn } from '@vueuse/core';
 import { defineStore } from 'pinia'
 import type { AccessToken } from '~/server/utils/db/users';
+import { ApiClient } from '~/utils/ApiClient';
 
-export const useUserInfoStore = defineStore({
-  id: 'userInfoStore',
+type userInfoStore = {
+  id: string | null;
+  name: string | null;
+  email: string | null;
+}
+
+export const useUserInfoStore = defineStore('userInfoStore', {
   state: () => ({
     id: null as string | null,
-    token: null as AccessToken | null,
     name: null as string | null,
     email: null as string | null,
   }),
 
   actions: {
     async init() {
-      if (!this.id || !this.token) {
-        try {
-          let user = await $fetch('/api/auth/register', {
-            method: 'POST',
-          });
-          this.id = user.id;
-          this.token = user.token;
-        } catch (e) {
-          console.error(e);
-        }
-      }
+
     },
     setName(name: string) {
       this.name = name;
-      updateUser();
+      updateUser(this);
     },
     setEmail(email: string) {
       this.email = email;
-      updateUser();
+      updateUser(this);
     },
   },
 
@@ -39,31 +34,13 @@ export const useUserInfoStore = defineStore({
 })
 
 // debounced
-const updateUser = useDebounceFn(async () => {
-  let store = useUserInfoStore();
-
-  if (!store.token) {
-    console.error('No token');
-    return;
-  }
-
-  let response = await $fetch('/api/users/me', {
-    method: 'PATCH',
-    headers: {
-      "Authorization": `${store.id}##${store.token.token}`,
-    },
-    body: JSON.stringify({
-      name: store.name,
-      email: store.email,
-    }),
+const updateUser = useDebounceFn(async (store: userInfoStore) => {
+  let response = await ApiClient.i.updateUser({
+    name: store.name,
+    email: store.email,
   });
 
-  if (response == 'unauthorized') {
-    console.error('Unauthorized');
-    store.token = null;
-    store.id = null;
-    store.init();
-  } else {
+  if (response) {
     store.id = response.id;
     store.name = response.name;
     store.email = response.email;

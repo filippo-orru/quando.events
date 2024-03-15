@@ -1,15 +1,21 @@
 import { CalendarTimeslot } from "~/data/Meeting";
 import { randomIdChars } from "./db_utils";
 import { UpdateMeeting } from "~/server/api/meetings/[...meetingId]/index.patch";
+import { useUserInfoStore as useUserStore } from "~/stores/UserInfo";
+import { getUserById } from "./users";
 
 // MARK: Types
-export type Meeting = {
+type DbMeeting = {
     id: string;
     title: string;
-    times: { [key: string]: CalendarTimeslot[] };
+    participants: { [userId: string]: DbMeetingParticipant };
 };
 
-const meetingStorage = useStorage<Meeting>('redis:meetings');
+type DbMeetingParticipant = {
+    times: CalendarTimeslot[];
+};
+
+const meetingStorage = useStorage<DbMeeting>('redis:meetings');
 
 // 34^8 = 1.785.793.904.896 possible combinations
 const meetingIdLength = [4, 4]; // 2 groups of 4 characters, separated by a dash
@@ -30,30 +36,65 @@ export async function createMeeting() {
     let meeting = {
         id: generateMeetingId(),
         title: '',
-        times: {},
-    } as Meeting;
+        participants: {},
+    } as DbMeeting;
     await meetingStorage.setItem(meeting.id, meeting);
     return meeting.id;
 }
 
 export async function getMeeting(id: string) {
-    return await meetingStorage.getItem(id);
+    let dbMeeting = await meetingStorage.getItem(id);
+    if (!dbMeeting) {
+        return null;
+    }
+
+    let participants = [] as MeetingParticipant[];
+    for (let [userId, participant] of Object.entries(dbMeeting.participants)) {
+        let user = await getUserById(userId);
+        if (user) {
+            participants.push({
+                id: userId,
+                name: user.name || 'Unknown',
+                times: participant.times,
+            });
+        }
+    }
+
+    return {
+        ...dbMeeting,
+        members: participants,
+    } as Meeting;
 }
 
 export async function updateMeeting(meetingId: string, userId: string, update: UpdateMeeting) {
-    let meeting = await getMeeting(meetingId);
+    let meeting = await meetingStorage.getItem(meetingId);
+
     if (meeting) {
         meeting.title = update.title || meeting.title;
         if (update.selectedTimes) {
-            meeting.times[userId] = update.selectedTimes.map((slot) => {
-                return {
-                    start: new Date(slot.start),
-                    end: new Date(slot.end),
-                } as CalendarTimeslot;
-            });
+            meeting.participants[userId] = {
+                times: update.selectedTimes.map((slot) => {
+                    return {
+                        start: new Date(slot.start),
+                        end: new Date(slot.end),
+                    } as CalendarTimeslot;
+                }),
+            };
         }
         await meetingStorage.setItem(meetingId, meeting);
         return meeting;
     }
     return null;
 }
+
+export type Meeting = {
+    id: string;
+    title: string;
+    members: MeetingParticipant[];
+};
+
+export type MeetingParticipant = {
+    id: string;
+    name: string;
+    times: CalendarTimeslot[];
+};

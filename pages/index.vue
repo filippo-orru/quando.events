@@ -13,7 +13,7 @@
             <p class="text-black/70 text-xl mt-2 mb-12">But <span class="underline">meetme</span> makes it easy</p>
             <a class="bg-gray-800 text-white px-4 py-4 rounded-full hover:bg-gray-700
             hover:ring-2 hover:ring-lime-300 transition-colors hover:shadow-xl"
-              href="/new-meeting">
+              href="/meeting/new">
               <font-awesome-icon icon="arrow-right" class="mr-2" /> Plan a meeting
             </a>
             <!-- <p class="text-gray-600 mt-4 italic text-sm">It's free!</p> -->
@@ -98,6 +98,10 @@
 </template>
 
 <style lang="scss">
+body {
+  overflow: hidden;
+}
+
 #landing-bg {
   transform: rotate(-1.2deg);
   left: -100px;

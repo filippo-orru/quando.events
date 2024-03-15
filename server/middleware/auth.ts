@@ -10,6 +10,6 @@ export default defineEventHandler(async (event) => {
     token.split("##")[0],
     token.split("##")[1]
   );
-  console.log("User authorized", user);
+  // console.log("User authorized", user);
   event.context.authorizedUser = user;
 })

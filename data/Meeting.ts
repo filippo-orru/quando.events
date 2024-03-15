@@ -24,11 +24,6 @@ export enum StepEnum  {
 }
 
 export const NewMeetingSteps = {
-    Name: {
-        step: StepEnum.Name,
-        title: 'Name',
-        link: 'name'
-    },
     Calendar: {
         step: StepEnum.Times,
         title: 'Times',

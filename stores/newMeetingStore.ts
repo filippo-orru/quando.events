@@ -3,6 +3,7 @@ import { add, intervalToDuration, isMonday, previousMonday, set } from 'date-fns
 import { defineStore } from 'pinia'
 import type { CalendarEntry, CalendarTimeslot } from '~/data/Meeting';
 import type { UpdateMeeting } from '~/server/api/meetings/[...meetingId]/index.patch';
+import type { MeetingParticipant } from '~/server/utils/db/meetings';
 
 const oneDayMs = 24 * 60 * 60 * 1000;
 
@@ -30,10 +31,14 @@ export function getStartOfTheWeek(from: Date) {
 }
 
 interface NewMeetingStore {
-    id: string;
-    meetingTitle: string;
+    meetingId: string;
+    data: MeetingData | null;
+}
+
+export type MeetingData = {
+    title: string;
     selectedTimes: CalendarTimeslot[];
-    events: CalendarEntry[];
+    members: MeetingParticipant[];
 }
 
 const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${meetingId}`, {
@@ -58,22 +63,44 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
         ] as CalendarEntry[];
 
         return {
-            id: meetingId,
-            meetingTitle: '',
-            selectedTimes: [] as CalendarTimeslot[],
-            events: events as CalendarEntry[],
+            meetingId: meetingId,
+            data: null
         } as NewMeetingStore;
+    },
+
+    actions: {
+        async fetchUpdate() {
+            let userStore = useUserInfoStore();
+            // Fetch the meeting from the server
+            let meeting = await ApiClient.i.getMeeting(this.meetingId);
+            if (meeting) {
+                this.data = {
+                    title: meeting.title,
+                    members: meeting.members.filter((member) => member.id !== userStore.id),
+                    selectedTimes: this.data?.selectedTimes || [],
+                }
+            }
+        },
+        save() {
+            if (!this.data) {
+                return;
+            }
+            saveMeeting(this.meetingId, this.data);
+        }
     },
 
     getters: {
         selectedTimesByDay: (state) => {
+            if (!state.data) {
+                return {};
+            }
             interface CalendarTimeslotByDay {
                 day: Date;
                 timeslots: CalendarTimeslot[];
             }
 
             let selectedTimesByDay: { [date: number]: CalendarTimeslotByDay } = {};
-            for (let timeslot of state.selectedTimes) {
+            for (let timeslot of state.data.selectedTimes) {
                 let s = timeslot.start;
                 let day = new Date(s.getFullYear(), s.getMonth(), s.getDate());
                 let dayRaw = day.getTime();
@@ -86,60 +113,19 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
             return selectedTimesByDay;
         },
     },
-
-    actions: {
-        save() {
-            saveMeeting(this);
-        }
-    },
-
-    persist: {
-        serializer: {
-            serialize: (value) => {
-                let v = value as NewMeetingStore;
-                // Convert dates to timestamps
-                return JSON.stringify({
-                    eventTitle: v.meetingTitle,
-                    selectedTimes: v.selectedTimes.map((timeslot: CalendarTimeslot) => ({
-                        start: timeslot.start.getTime(),
-                        end: timeslot.end.getTime(),
-                    })),
-
-                });
-            },
-            deserialize: (value: string) => {
-                // Convert timestamps to dates
-                let parsed = JSON.parse(value);
-                return {
-                    eventTitle: parsed.eventTitle,
-                    selectedTimes: parsed.selectedTimes.map((timeslot: { start: number, end: number }) => ({
-                        start: new Date(timeslot.start),
-                        end: new Date(timeslot.end),
-                    })),
-                };
-            },
-        },
-    }
 })
 
 export const useNewMeetingStore = (meetingId: string) => newMeetingStore(meetingId)();
 
-const saveMeeting = useDebounceFn(async (store: NewMeetingStore) => {
+const saveMeeting = useDebounceFn(async (id: string, data: MeetingData) => {
     // Save the selected times to the server
-    let response = await $fetch(`/api/meetings/${store.id}`,
-        {
-            method: 'PATCH',
-            headers: {
-                'Authorization' : 
-            },
-            body: {
-                title: store.meetingTitle,
-                selectedTimes: store.selectedTimes.map((timeslot: CalendarTimeslot) => ({
-                    start: timeslot.start.getTime(),
-                    end: timeslot.end.getTime(),
-                })),
-            } as UpdateMeeting,
-        });
+    let response = ApiClient.i.updateMeeting(id, {
+        title: data.title,
+        selectedTimes: data.selectedTimes.map((timeslot: CalendarTimeslot) => ({
+            start: timeslot.start.getTime(),
+            end: timeslot.end.getTime(),
+        })),
+    } as UpdateMeeting);
 
     // if (response.id !== 200) {
     //     console.error('Failed to save meeting');

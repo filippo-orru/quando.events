@@ -7,9 +7,12 @@ type User = {
     tokens: AccessToken[];
 }
 
-export type AccessToken = { token: string, expiration: number }
+export type AccessToken = {
+    token: string,
+    expiration: number
+}
 
-const userStorage =useStorage<User>('redis:users');
+const userStorage = useStorage<User>('redis:users');
 
 export async function createUser() {
     // Create a new user in the database
@@ -27,14 +30,16 @@ export async function createUser() {
 }
 
 export async function getUserByToken(userId: string, token: string) {
-    console.log("all" , await userStorage.getKeys());
-
     // Get the user from the database
     let user = await userStorage.getItem(userId);
     if (user?.tokens.some((t) => t.token == token)) {
         return user;
     }
     return null;
+}
+
+export async function getUserById(id: string) {
+    return await userStorage.getItem(id);
 }
 
 type UserUpdate = {
