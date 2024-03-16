@@ -67,7 +67,7 @@ export async function getMeeting(id: string): Promise<MeetingSerialized | null> 
     };
 }
 
-export async function updateMeeting(meetingId: string, userId: string, update: UpdateMeeting) {
+export async function updateMeeting(meetingId: string, userId: string, update: UpdateMeeting): Promise<MeetingSerialized | null> {
     let meeting = await meetingStorage.getItem(meetingId);
 
     if (meeting) {
@@ -78,7 +78,7 @@ export async function updateMeeting(meetingId: string, userId: string, update: U
             } as DbMeetingParticipant;
         }
         await meetingStorage.setItem(meetingId, meeting);
-        return meeting;
+        return getMeeting(meetingId);
     }
     return null;
 }

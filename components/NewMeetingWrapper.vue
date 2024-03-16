@@ -16,17 +16,8 @@ if (!meetingId) {
 }
 let newMeetingStore = useNewMeetingStore(meetingId);
 
-function getNewMeetingProps(): NewMeetingProps {
-    return {
-        meetingId: meetingId,
-        data: newMeetingStore.data,
-        saveMeetingData: newMeetingStore.save,
-        fetchUpdate: newMeetingStore.fetchUpdate
-    } as NewMeetingProps;
-}
-
 onMounted(async () => {
-    await newMeetingStore.fetchUpdate();
+    await newMeetingStore.init();
 });
 
 </script>
@@ -43,7 +34,7 @@ onMounted(async () => {
                 hover:shadow-md hover:ring-2 hover:ring-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                         Create a new meeting</a>
                 </div>
-                <slot v-else-if="newMeetingStore.data" :props="getNewMeetingProps()" />
+                <slot v-else-if="newMeetingStore.data" :props="newMeetingStore.getProps()" />
                 <div v-else class="flex items-center justify-center h-full">
                     <LoadingIndicator />
                 </div>

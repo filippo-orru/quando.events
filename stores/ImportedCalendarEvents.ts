@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { dateIsBetween } from './NewMeetingStore'
 import type { CalendarEntry } from '~/data/Meeting';
+import { add, set } from 'date-fns';
 
 type ImportedCalendarEventsStore = {
   events: CalendarEntry[];
@@ -15,9 +16,19 @@ type StoredCalendarEntry = {
 
 export const useImportedCalendarEventsStore = defineStore({
   id: 'importedCalendarEventsStore',
-  state: () => ({
-    events: [] as CalendarEntry[],
-  }),
+  state: () => {
+    let hintEventStart = set(getStartOfTheWeek(new Date()), { hours: 14, minutes: 30 });
+
+    let events = [
+      {
+        'start': hintEventStart,
+        'end': add(hintEventStart, { hours: 3 }),
+        title: 'Click to show your own calendar events!'
+      }
+    ] as CalendarEntry[];
+
+    return { events: events }
+  },
   getters: {
     eventsInOverlapGroups() {
       let overlapGroups: Array<Array<CalendarEntry>> = [];

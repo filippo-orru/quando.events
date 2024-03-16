@@ -29,7 +29,16 @@ export async function createUser() {
     return user;
 }
 
-export async function getUserByToken(userId: string, token: string) {
+export async function getUserByToken(accessToken: string | null) {
+    if (!accessToken) {
+        return null;
+    }
+    let [userId, token] = accessToken.split("##");
+    if (!userId || !token) {
+        console.log("Bad token");
+        return;
+    }
+
     // Get the user from the database
     let user = await userStorage.getItem(userId);
     if (user?.tokens.some((t) => t.token == token)) {

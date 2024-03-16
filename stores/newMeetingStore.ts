@@ -1,7 +1,7 @@
 import { useDebounceFn } from '@vueuse/core';
-import { add, intervalToDuration, isMonday, previousMonday, set } from 'date-fns';
+import { isMonday, previousMonday } from 'date-fns';
 import { defineStore } from 'pinia'
-import type { CalendarEntry, CalendarTimeslot } from '~/data/Meeting';
+import { serializeCalendarTimeslot, type CalendarTimeslot, type MeetingSerialized, deserializeMeeting } from '~/data/Meeting';
 import type { UpdateMeeting } from '~/server/api/meetings/[...meetingId]/index.patch';
 import type { MeetingMember } from '~/server/utils/db/meetings';
 
@@ -45,32 +45,11 @@ export type NewMeetingProps = {
     meetingId: string;
     data: MeetingData;
 
-
-    fetchUpdate: () => Promise<void>;
     saveMeetingData: () => Promise<void>;
 };
 
 const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${meetingId}`, {
     state: () => {
-        // Random events
-        // let events = [...Array(5 + Math.floor(Math.random() * 5))].map((_, index) => {
-        //     let start = add(getStartOfTheWeek(new Date()), { days: Math.floor(Math.random() * 7), hours: 7 + Math.floor(Math.random() * 8) });
-        //     return {
-        //         start: start,
-        //         end: add(start, { minutes: (2 + Math.floor(Math.random() * 5)) * 30 }),
-        //         title: `Event ${index + 1}`,
-        //     };
-        // });
-        let hintEventStart = set(getStartOfTheWeek(new Date()), { hours: 14, minutes: 30 });
-
-        let events = [
-            {
-                'start': hintEventStart,
-                'end': add(hintEventStart, { hours: 3 }),
-                title: 'Click to show your own calendar events!'
-            }
-        ] as CalendarEntry[];
-
         return {
             meetingId: meetingId,
             data: null
@@ -78,46 +57,114 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
     },
 
     actions: {
+        init() {
+            this.fetchUpdate();
+            wsConnect();
+        },
         async fetchUpdate() {
-            let userStore = useUserInfoStore();
-            // Fetch the meeting from the server
             try {
                 let meeting = await ApiClient.i.getMeeting(this.meetingId);
-                if (meeting) {
-                    let myMember = meeting.members.find((member) => member.id === userStore.id);
-                    this.data = {
-                        title: meeting.title,
-                        members: meeting.members.filter((member) => member.id !== userStore.id),
-                        selectedTimes: myMember && myMember.times || []
-                    }
-                }
+                this.applyUpdate(meeting);
             } catch (e) {
                 console.error(e);
                 this.data = 'error';
             }
         },
+        applyUpdate(newMeeting: Meeting) {
+            let userStore = useUserInfoStore();
+            if (newMeeting) {
+                let myMember = newMeeting.members.find((member) => member.id === userStore.id);
+                this.data = {
+                    title: newMeeting.title,
+                    members: newMeeting.members.filter((member) => member.id !== userStore.id),
+                    selectedTimes: myMember && myMember.times || []
+                }
+            }
+        },
         save() {
-            if (this.data && typeof this.data === 'object') { // Hack
+            if (this.data && this.data !== 'error') {
                 saveMeeting(this.meetingId, this.data);
             }
-        }
+        },
+        getProps() {
+            return {
+                meetingId: this.meetingId,
+                data: this.data,
+                saveMeetingData: this.save
+            } as NewMeetingProps
+        },
     },
 
     getters: {
+
     },
 })
 
+// Messages sent by the client
+export type MeetingWsMessageC =
+    {
+        type: 'auth';
+        token: string;
+        userId: string;
+        meetingId: string;
+    } | {
+        type: 'update';
+        data: UpdateMeeting;
+    }
+
+// Messages sent by the server
+export type MeetingWsMessageS = {
+    type: 'update';
+    data: MeetingSerialized;
+} | {
+    type: 'error',
+    message?: string;
+}
+
+let ws: WebSocket | null = null;
+const wsConnect = async () => {
+    const isSecure = location.protocol === "https:";
+    const url = (isSecure ? "wss://" : "ws://") + location.host + "/api/meetings/connect";
+    if (ws) {
+        console.log("ws", "Closing previous connection before reconnecting...");
+        ws.close();
+    }
+
+    let websocket = new WebSocket(url);
+
+    websocket.addEventListener("message", (event) => {
+        const message: MeetingWsMessageS = JSON.parse(event.data);
+        switch (message.type) {
+            case 'update':
+                let store = useNewMeetingStore(message.data.id);
+                store.applyUpdate(deserializeMeeting(message.data));
+                break;
+        }
+    });
+
+    await new Promise((resolve) => websocket.addEventListener("open", resolve));
+    ws = websocket;
+};
+
+const wsSend = (message: string | object) => {
+    let data = typeof message === 'string' ? message : JSON.stringify(message);
+    console.log("sending message...");
+    ws?.send(data);
+}
+
 export const useNewMeetingStore = (meetingId: string) => newMeetingStore(meetingId)();
 
-const saveMeeting = useDebounceFn(async (id: string, data: MeetingData) => {
+const saveMeeting = useDebounceFn(async (id: string, meetingData: MeetingData) => {
     // Save the selected times to the server
-    let response = ApiClient.i.updateMeeting(id, {
-        title: data.title,
-        selectedTimes: data.selectedTimes.map((timeslot: CalendarTimeslot) => ({
-            start: timeslot.start.getTime(),
-            end: timeslot.end.getTime(),
-        })),
-    } as UpdateMeeting);
+    let data = {
+        title: meetingData.title,
+        selectedTimes: meetingData.selectedTimes.map((timeslot: CalendarTimeslot) => serializeCalendarTimeslot(timeslot)),
+    } as UpdateMeeting;
+    wsSend({
+        'type': 'update',
+        'data': data,
+    });
+    // let response = ApiClient.i.updateMeeting(id, );
 
     // if (response.id !== 200) {
     //     console.error('Failed to save meeting');

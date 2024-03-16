@@ -17,12 +17,6 @@ function updateToday() {
 }
 let updateTodayTimer: NodeJS.Timeout;
 
-// Todo use websocket
-function updateMeetingInfo() {
-  meetingProps.fetchUpdate();
-}
-let updateMeetingInfoTimer: NodeJS.Timeout;
-
 const scrollViewportRef = ref<HTMLDivElement>();
 const viewportIsReady = useState('viewportIsReady', () => false);
 
@@ -330,7 +324,7 @@ function scrollToNow() {
 
   let scrollHeight = scrollViewportRef.value!.scrollHeight;
   let top = scrollHeight * dateToPercentOfDay(now.value) / 100 - 150;
-  // console.log(scrollHeight, '*', dateToPercentOfDay(now.value) / 100, '-', 150, '=', top);
+  // console.console.log(scrollHeight, '*', dateToPercentOfDay(now.value) / 100, '-', 150, '=', top);
   scrollViewportRef.value!.scrollTo({ top: top });
 }
 
@@ -364,7 +358,6 @@ onMounted(() => {
   minMoveDelta = Math.min(130, window.innerHeight * 0.15);
   locale = navigator.languages[0] || 'en-US';
 
-
   nextTick(() => {
     scrollToNow();
     viewportIsReady.value = true;
@@ -374,7 +367,6 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(updateTodayTimer);
   clearInterval(nextBrandTimer);
-  clearInterval(updateMeetingInfoTimer);
 });
 
 </script>
@@ -569,10 +561,8 @@ onUnmounted(() => {
                 </div>
 
                 <div v-for="member in  meetingData.members " class="w-full h-full absolute">
-                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  "
-                    class="bg-lime-600 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
-                    py-2 px-1 md:px-2 md:py-2 overflow-hidden"
-                    :style="{
+                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="bg-lime-600 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
+                    py-2 px-1 md:px-2 md:py-2 overflow-hidden" :style="{
                 top: getTimeslotTop(slot) + '%', height: 'calc('
                   + getTimeslotHeight(slot) * 100 + '% - 1px)',
               }">
@@ -624,8 +614,8 @@ onUnmounted(() => {
         <div class="h-full overflow-auto">
           <div class=" pb-8">
             <label class="text-gray-500 mt-4">Title</label>
-            <input type="text" v-model="meetingData.title" @input="(_) => meetingProps.saveMeetingData()"
-              name="title" maxlength="100"
+            <input type="text" v-model="meetingData.title" @input="(_) => meetingProps.saveMeetingData()" name="title"
+              maxlength="100"
               class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
               placeholder="Event title (optional)" :required="false" />
 

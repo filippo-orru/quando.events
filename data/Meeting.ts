@@ -53,7 +53,6 @@ export function deserializeCalendarTimeslot(slot: CalendarTimeslotSerialized): C
 }
 
 export function serializeCalendarTimeslot(slot: CalendarTimeslot): CalendarTimeslotSerialized {
-    console.log(slot)
     return {
         start: slot.start.getTime(),
         end: slot.end.getTime(),

@@ -29,6 +29,9 @@ export default defineNuxtConfig({
     },
   },
   nitro: {
+    experimental: {
+      websocket: true
+    },
     storage: {
       "redis:users": {
         driver: 'redis',
