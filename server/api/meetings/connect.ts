@@ -21,54 +21,53 @@ export function sendMeetingUpdate(meetingId: string, fromUserId: string, meeting
         for (let peerId of Object.keys(clientList)) {
             let client = clientList[peerId];
             if (client.userId !== fromUserId) {
-                client.peer.send(JSON.stringify({
-                    type: "update",
-                    data: meeting
-                } as MeetingWsMessageS));
+                sendMessage(
+                    client.peer,
+                    {
+                        type: "update",
+                        data: meeting
+                    }
+                );
             }
         }
     }
 }
 
-function sendError(peer: WsPeer, message?: WsErrorS) {
-    peer.send(JSON.stringify({
-        type: "error",
-        message: message
-    } as MeetingWsMessageS));
+function sendMessage(peer: WsPeer, message: MeetingWsMessageS) {
+    peer.send(JSON.stringify(message));
 }
 
-function getMeetingId(peer: any): string {
-    try {
-        let urlParts = peer.url.split("/");
-        return urlParts[urlParts.length - 2]; // second to last part
-    } catch (e) {
-        sendError(peer, "Bad token");
-        throw e;
-    }
+function sendError(peer: WsPeer, message?: WsErrorS) {
+    sendMessage(peer,
+        {
+            type: "error",
+            message: message
+        }
+    );
 }
+
 
 export default defineWebSocketHandler({
     async upgrade(request) {
     },
     async open(peer) {
-        // console.log("[ws] upgrade", peer);
-        let meetingId = getMeetingId(request);
-        let token = (request.headers as Record<string, string>)['Authorization'];
-        let user = await getUserByToken(token);
-        if (!user) {
-            throw new Error("Unauthorized");
-        } else {
-            let clientList = clients[meetingId] || (clients[meetingId] = {});
-            clientList[request.id] = { userId: user.id, peer: request };
-        }
     },
 
     async message(peer, message) {
-        console.log("[ws] message", peer, message);
+        // console.log("[ws] message", peer, message);
         let msg = JSON.parse(message.text()) as MeetingWsMessageC;
 
+        let user;
         switch (msg.type) {
             case 'auth':
+                user = await getUserByToken(msg.userId, msg.token);
+                if (!user) {
+                    sendMessage(peer, { type: "authResponse", response: "unauthorized" });
+                } else {
+                    let clientList = clients[msg.meetingId] || (clients[msg.meetingId] = {});
+                    clientList[peer.id] = { userId: user.id, peer: peer };
+                    sendMessage(peer, { type: "authResponse", response: "ok" });
+                }
                 break;
             case 'update':
                 let meetingId = msg.meetingId!;
@@ -77,7 +76,7 @@ export default defineWebSocketHandler({
                     sendError(peer, "Unauthorized");
                     return;
                 }
-                let user = await getUserById(client.userId);
+                user = await getUserById(client.userId);
                 if (user) {
                     let meeting = await updateMeeting(meetingId, user.id, msg.data);
                     if (!meeting) {
@@ -94,10 +93,10 @@ export default defineWebSocketHandler({
     },
 
     close(peer, event) {
-        console.log("[ws] close", peer, event);
+        // console.log("[ws] close", peer, event);
     },
 
     error(peer, error) {
-        console.log("[ws] error", peer, error);
+        // console.log("[ws] error", peer, error);
     },
 });

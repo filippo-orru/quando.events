@@ -7,6 +7,11 @@ import type { Meeting } from "~/server/utils/db/meetings";
 class TokenStore {
   private key = 'accessToken';
   private accessToken: LocalAccessToken | null = null;
+  private onTokenUpdate: ((token: LocalAccessToken | null) => void)[] = [];
+
+  addTokenUpdateListener(listener: (token: LocalAccessToken | null) => void) {
+    this.onTokenUpdate.push(listener);
+  }
 
   getAccessToken() {
     if (!this.accessToken) {
@@ -25,6 +30,7 @@ class TokenStore {
       localStorage.removeItem(this.key);
     }
     this.accessToken = token;
+    this.onTokenUpdate.forEach(listener => listener(token));
   }
 }
 

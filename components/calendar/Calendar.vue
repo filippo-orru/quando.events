@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration } from "date-fns";
 import { type CalendarTimeslot } from '~/data/Meeting';
-import type { NewMeetingProps } from "~/stores/NewMeetingStore";
 
-const props = defineProps<{ props: NewMeetingProps }>();
-let meetingProps = props.props;
-let meetingData = meetingProps.data;
+let props = defineProps<{
+  meetingId: string,
+}>();
+
+let newMeetingStore = useNewMeetingStore(props.meetingId);
+let newMeetingStoreRef = storeToRefs(newMeetingStore);
+let meetingData = newMeetingStoreRef.data as Ref<MeetingData>; // Ensured by NewMeetingWrapper
 
 let userInfo = useUserInfoStore();
 
@@ -93,7 +96,7 @@ function showAddTimeslotButtonFor(day: Date, hour: number) {
     start: addHours(day, hour),
     end: addHours(day, hour + 1),
   };
-  return meetingData.selectedTimes.every((slot2) => timeslotsOverlap(timeslot, slot2) in [Overlap.None, Overlap.Touch]);
+  return meetingData.value.selectedTimes.every((slot2) => timeslotsOverlap(timeslot, slot2) in [Overlap.None, Overlap.Touch]);
 }
 
 enum Overlap {
@@ -116,7 +119,7 @@ function timeslotsOverlap(slot1: CalendarTimeslot, slot2: CalendarTimeslot): Ove
 
 function mergeOverlappingTimeslots() {
   let allOk = false;
-  let list = meetingData.selectedTimes;
+  let list = meetingData.value.selectedTimes;
   while (!allOk) {
     allOk = true;
 
@@ -148,14 +151,14 @@ function mergeOverlappingTimeslots() {
       }
     }
   }
-  meetingData.selectedTimes = list;
-  meetingProps.saveMeetingData();
+  meetingData.value.selectedTimes = list;
+  newMeetingStore.save();
 }
 
 function addTimeslotViaTap(day: Date, hour: number) {
   // Delay for a bit to allow the user to see the button press
   setTimeout(() => {
-    meetingData.selectedTimes.push({
+    meetingData.value.selectedTimes.push({
       start: addHours(day, hour),
       end: addHours(day, hour + 1),
     });
@@ -174,8 +177,8 @@ function formatSelectedTimeslotTime(slot: CalendarTimeslot) {
 }
 
 function removeTimeslot(day: Date, slot: CalendarTimeslot) {
-  meetingData.selectedTimes = meetingData.selectedTimes.filter((s) => s.start != slot.start);
-  meetingProps.saveMeetingData();
+  meetingData.value.selectedTimes = meetingData.value.selectedTimes.filter((s) => s.start != slot.start);
+  newMeetingStore.save();
 }
 
 let bottomSheetExpanded: Ref<boolean> = useState('bottomSheetExpanded', () => false);
@@ -501,6 +504,18 @@ onUnmounted(() => {
                   </div>
                 </div>
 
+                <div v-for="member in  meetingData.members " class="w-full h-full absolute pointer-events-none">
+                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="bg-lime-600 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
+                    py-2 px-1 md:px-2 md:py-2 overflow-hidden" :style="{
+                top: getTimeslotTop(slot) + '%', height: 'calc('
+                  + getTimeslotHeight(slot) * 100 + '% - 1px)',
+              }">
+                    <span class="transition-all"
+                      :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
+                      {{ member.name }}</span>
+                  </div>
+                </div>
+
                 <!-- add time slot buttons -->
                 <div class="absolute w-full h-full flex flex-col" :class="{ 'hidden': draggingTimeslotPosition }">
                   <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
@@ -560,19 +575,6 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <div v-for="member in  meetingData.members " class="w-full h-full absolute">
-                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="bg-lime-600 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
-                    py-2 px-1 md:px-2 md:py-2 overflow-hidden" :style="{
-                top: getTimeslotTop(slot) + '%', height: 'calc('
-                  + getTimeslotHeight(slot) * 100 + '% - 1px)',
-              }">
-                    <span class="transition-all"
-                      :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
-                      {{ member.name }}</span>
-                  </div>
-                </div>
-
-
                 <!-- Now indicator -->
                 <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
                   :style="{ top: dateToPercentOfDay(now) + '%' }">
@@ -608,13 +610,13 @@ onUnmounted(() => {
         <div @click="toggleBottomSheet" @touchstart="bottomSheetSwipeStart"
           class="w-full py-4 md:pt-0 flex flex-col items-center gap-4">
           <div class="h-1 bg-slate-400 rounded-md w-12 md:hidden"></div> <!-- Drag-bar -->
-          <p class="text-xl text-slate-600">Your Event</p>
+          <p class="text-xl text-slate-600">{{ meetingData.title || "Your Event" }}</p>
         </div>
 
         <div class="h-full overflow-auto">
           <div class=" pb-8">
             <label class="text-gray-500 mt-4">Title</label>
-            <input type="text" v-model="meetingData.title" @input="(_) => meetingProps.saveMeetingData()" name="title"
+            <input type="text" v-model="meetingData.title" @input="(_) => newMeetingStore.save()" name="title"
               maxlength="100"
               class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
               placeholder="Event title (optional)" :required="false" />
@@ -625,27 +627,25 @@ onUnmounted(() => {
               <p v-if="meetingData.selectedTimes.length == 0" class="text-gray-500">No times
                 selected yet
               </p>
-              <div v-for="  slots  in  getTimeslotsByDay(meetingData.selectedTimes) "
+              <div v-for="slots in getTimeslotsByDay(meetingData.selectedTimes) "
                 class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
                 <p class="text-slate-600 px-2">{{ formatSelectedTimesDay(slots.day) }}</p>
                 <div class="text-slate-500 flex justify-between pr-2 hover:bg-slate-500/10 px-2"
-                  v-for="  slot   in   slots.timeslots  ">
+                  v-for="  slot in slots.timeslots  ">
                   <span>{{ formatTime(slot.start) }} – {{ formatTime(slot.end) }}</span>
                   <button class="rounded-full hover:bg-slate-500/20 h-6 w-6"
                     @click="() => removeTimeslot(slots.day, slot)"><font-awesome-icon icon="times" /></button>
                 </div>
               </div>
 
-              <div v-for="  member  in  meetingData.members ">
+              <div v-for="member in meetingData.members.filter((m) => m.times.length > 0)" class="flex flex-col gap-2">
                 <p class="text-gray-500 mt-4">{{ member.name }}</p>
-                <div v-for="  slots  in  getTimeslotsByDay(member.times) "
+                <div v-for="slots in getTimeslotsByDay(member.times) "
                   class="flex flex-col gap-2 bg-gray-100 py-2 rounded-md">
                   <p class="text-slate-600 px-2">{{ formatSelectedTimesDay(slots.day) }}</p>
                   <div class="text-slate-500 flex justify-between pr-2 hover:bg-slate-500/10 px-2"
-                    v-for="  slot   in   slots.timeslots  ">
+                    v-for="slot in slots.timeslots  ">
                     <span>{{ formatTime(slot.start) }} – {{ formatTime(slot.end) }}</span>
-                    <button class="rounded-full hover:bg-slate-500/20 h-6 w-6"
-                      @click="() => removeTimeslot(slots.day, slot)"><font-awesome-icon icon="times" /></button>
                   </div>
                 </div>
               </div>
@@ -656,7 +656,7 @@ onUnmounted(() => {
 
     </div>
   </div>
-  <NuxtLink :to="`/meeting/${meetingProps.meetingId}/invite`" class="absolute right-10 bg-blue-600 rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
+  <NuxtLink :to="`/meeting/${meetingId}/invite`" class="absolute right-10 bg-blue-600 rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
   text-white hover:bg-blue-500 bottom-24 md:bottom-10 flex gap-4">
     Invite others
     <font-awesome-icon icon="user-plus" class="" />
@@ -669,7 +669,7 @@ onUnmounted(() => {
 
 <style>
 .striped-background {
-  background: repeating-linear-gradient(-225deg, #2585e9ba, #2585e9ba 10px, #2585e9 10px, #2585e9 20px);
+  background: repeating-linear-gradient(-225deg, #69a7f0, #69a7f0 10px, #2585e9 10px, #2585e9 20px);
 }
 
 /* Transitions */

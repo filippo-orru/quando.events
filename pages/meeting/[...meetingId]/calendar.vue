@@ -3,7 +3,7 @@
 </script>
 
 <template>
-    <NewMeetingWrapper v-slot="slotProps">
-        <Calendar :props="slotProps.props" />
+    <NewMeetingWrapper v-slot="props">
+        <Calendar :meeting-id="props.meetingId" />
     </NewMeetingWrapper>
 </template>

@@ -41,13 +41,6 @@ export type MeetingData = {
     members: MeetingMember[];
 }
 
-export type NewMeetingProps = {
-    meetingId: string;
-    data: MeetingData;
-
-    saveMeetingData: () => Promise<void>;
-};
-
 const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${meetingId}`, {
     state: () => {
         return {
@@ -59,7 +52,8 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
     actions: {
         init() {
             this.fetchUpdate();
-            wsConnect();
+            ApiClient.i.tokenStore.addTokenUpdateListener((_) => sendAuth(meetingId));
+            wsConnect(this.meetingId);
         },
         async fetchUpdate() {
             try {
@@ -71,6 +65,7 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
             }
         },
         applyUpdate(newMeeting: Meeting) {
+            console.log('Applying update', newMeeting, 'old', this.data);
             let userStore = useUserInfoStore();
             if (newMeeting) {
                 let myMember = newMeeting.members.find((member) => member.id === userStore.id);
@@ -86,13 +81,6 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
                 saveMeeting(this.meetingId, this.data);
             }
         },
-        getProps() {
-            return {
-                meetingId: this.meetingId,
-                data: this.data,
-                saveMeetingData: this.save
-            } as NewMeetingProps
-        },
     },
 
     getters: {
@@ -104,25 +92,30 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
 export type MeetingWsMessageC =
     {
         type: 'auth';
+        meetingId: string;
         token: string;
         userId: string;
-        meetingId: string;
     } | {
         type: 'update';
+        meetingId: string;
         data: UpdateMeeting;
     }
 
 // Messages sent by the server
-export type MeetingWsMessageS = {
-    type: 'update';
-    data: MeetingSerialized;
-} | {
-    type: 'error',
-    message?: string;
-}
+export type MeetingWsMessageS =
+    {
+        type: 'authResponse';
+        response: 'unauthorized' | 'unknown' | 'ok';
+    } | {
+        type: 'update';
+        data: MeetingSerialized;
+    } | {
+        type: 'error',
+        message?: string;
+    }
 
 let ws: WebSocket | null = null;
-const wsConnect = async () => {
+const wsConnect = async (meetingId: string) => {
     const isSecure = location.protocol === "https:";
     const url = (isSecure ? "wss://" : "ws://") + location.host + "/api/meetings/connect";
     if (ws) {
@@ -135,24 +128,46 @@ const wsConnect = async () => {
     websocket.addEventListener("message", (event) => {
         const message: MeetingWsMessageS = JSON.parse(event.data);
         switch (message.type) {
+            case 'authResponse':
+                console.log('ws', 'auth response', message.response);
+                if (message.response !== 'ok') {
+                    // Log out?
+                }
+                break;
             case 'update':
                 let store = useNewMeetingStore(message.data.id);
                 store.applyUpdate(deserializeMeeting(message.data));
+                break;
+            case 'error':
+                console.error('Error from server:', message.message);
                 break;
         }
     });
 
     await new Promise((resolve) => websocket.addEventListener("open", resolve));
     ws = websocket;
+
+    sendAuth(meetingId);
 };
 
-const wsSend = (message: string | object) => {
-    let data = typeof message === 'string' ? message : JSON.stringify(message);
-    console.log("sending message...");
+const wsSend = (message: MeetingWsMessageC) => {
+    let data = JSON.stringify(message);
+    console.log("sending message...", data);
     ws?.send(data);
 }
 
-export const useNewMeetingStore = (meetingId: string) => newMeetingStore(meetingId)();
+function sendAuth(meetingId: string) {
+    let accessToken = ApiClient.i.tokenStore.getAccessToken();
+    if (!accessToken) {
+        return;
+    }
+    wsSend({
+        type: 'auth',
+        meetingId: meetingId,
+        token: accessToken.token,
+        userId: accessToken.id,
+    } as MeetingWsMessageC)
+}
 
 const saveMeeting = useDebounceFn(async (id: string, meetingData: MeetingData) => {
     // Save the selected times to the server
@@ -163,10 +178,13 @@ const saveMeeting = useDebounceFn(async (id: string, meetingData: MeetingData) =
     wsSend({
         'type': 'update',
         'data': data,
-    });
+        'meetingId': id
+    } as MeetingWsMessageC);
     // let response = ApiClient.i.updateMeeting(id, );
 
     // if (response.id !== 200) {
     //     console.error('Failed to save meeting');
     // }
 }, 100);
+
+export const useNewMeetingStore = (meetingId: string) => newMeetingStore(meetingId)();

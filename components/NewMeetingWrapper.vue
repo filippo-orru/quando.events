@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { NewMeetingProps } from '~/stores/NewMeetingStore';
 
 
 defineProps<{
@@ -34,7 +33,7 @@ onMounted(async () => {
                 hover:shadow-md hover:ring-2 hover:ring-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                         Create a new meeting</a>
                 </div>
-                <slot v-else-if="newMeetingStore.data" :props="newMeetingStore.getProps()" />
+                <slot v-else-if="newMeetingStore.data" :meeting-id="meetingId"/>
                 <div v-else class="flex items-center justify-center h-full">
                     <LoadingIndicator />
                 </div>
