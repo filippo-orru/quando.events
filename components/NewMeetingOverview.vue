@@ -214,6 +214,7 @@ function nextBrand() {
 }
 
 let showImportEventsDialog = useState('showImportEventsDialog', () => false);
+let showInviteDialog = useState('showInviteDialog', () => false);
 
 type DragTimeslotWhich = 'start' | 'end' | 'both';
 type DragTimeslot = {
@@ -656,15 +657,18 @@ onUnmounted(() => {
 
     </div>
   </div>
-  <NuxtLink :to="`/meeting/${meetingId}/invite`" class="absolute right-10 bg-blue-600 rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
-  text-white hover:bg-blue-500 bottom-24 md:bottom-10 flex gap-4">
+  <button class="absolute right-10 bg-blue-600 rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
+  text-white hover:bg-blue-500 bottom-24 md:bottom-10 flex gap-4"
+  @click="showInviteDialog = true">
     Invite others
     <font-awesome-icon icon="user-plus" class="" />
-  </NuxtLink>
+  </button>
 
   <CalendarImportDialog :isOpen="showImportEventsDialog" :closeModal="() => showImportEventsDialog = false" />
 
-  <SetNameDialog />
+  <InviteDialog :meeting-id="meetingId" :is-open="showInviteDialog" :close-modal="() => showInviteDialog = false" />
+
+  <JoinMeetingDialog :meeting-id="meetingId" />
 </template>
 
 <style>

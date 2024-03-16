@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import {
-    TransitionRoot,
-    TransitionChild,
-    Dialog,
-    DialogPanel,
-    DialogTitle,
+  TransitionRoot,
+  TransitionChild,
+  Dialog,
+  DialogPanel,
+  DialogTitle,
 } from '@headlessui/vue'
 
 const props = defineProps<{
@@ -35,7 +35,7 @@ function close() {
             leave-to="opacity-0 scale-95">
             <DialogPanel
               class="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 pt-4 text-left align-middle shadow-xl transition-all">
-              <DialogTitle as="div" class="flex items-center">
+              <DialogTitle as="div" class="flex items-center" :class="{ 'mt-2': !closeModal }">
                 <h3 class="text-lg font-medium leading-6 text-gray-900">{{ props.title }}</h3>
                 <button v-if="closeModal" class="ml-auto p-2 rounded-full hover:bg-gray-200" @click="close">
                   <svg class="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"

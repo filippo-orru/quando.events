@@ -1,5 +1,11 @@
 <script lang="ts" setup>
-import { text } from '@fortawesome/fontawesome-svg-core';
+let props = defineProps<{
+  meetingId: string
+}>();
+
+let meetingStore = useNewMeetingStore(props.meetingId);
+
+let userIsMeetingCreator = (meetingStore.data as MeetingData).members.length === 0;
 
 let userStore = useUserInfoStore();
 let nameValue = ref('');
@@ -30,7 +36,8 @@ function getNameInitials() {
 
 <template>
 
-  <SimpleDialog title="What's your name?" :is-open="!isSet(userStore.name)">
+  <SimpleDialog :title="userIsMeetingCreator ? 'Join this meeting' : 'What\'s your name?'"
+    :is-open="!isSet(userStore.name)">
     <div class="text-gray-800">
       <div class="flex mt-4">
         <div class="rounded-full bg-slate-400 h-10 w-10 mr-4 flex items-center justify-center text-white p-2">
@@ -53,7 +60,7 @@ function getNameInitials() {
         disabled:opacity-50 disabled:cursor-not-allowed
         focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         @click="userStore.setName(nameValue)">
-        Done
+        {{ userIsMeetingCreator ? 'Join' : 'Done' }}
       </button>
     </div>
   </SimpleDialog>
