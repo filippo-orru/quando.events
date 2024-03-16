@@ -152,7 +152,7 @@ const wsConnect = async (meetingId: string) => {
 
 const wsSend = (message: MeetingWsMessageC) => {
     let data = JSON.stringify(message);
-    console.log("sending message...", data);
+    // console.log("sending message...", data);
     ws?.send(data);
 }
 

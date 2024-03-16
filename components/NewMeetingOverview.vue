@@ -444,7 +444,7 @@ onUnmounted(() => {
                   }}</span>
               </div>
               <span class="inline-flex justify-center items-center w-10 h-10 text-2xl rounded-full"
-                :class="{ 'bg-lime-500 text-white': day.isToday }">{{ day.date.getDate()
+                :class="{ 'bg-accent-dark text-white': day.isToday }">{{ day.date.getDate()
                 }}</span>
             </div>
           </div>
@@ -485,10 +485,10 @@ onUnmounted(() => {
                   :key="group[0].start.toString()">
                   <!-- Event overlap group -->
                   <div class="absolute left-0 right-1 md:right-2 p-1 md:px-2 md:py-2 overflow-hidden inline-flex flex-col justify-start 
-                                    bg-lime-500/80 text-gray-600 rounded-md text-xs break-all"
+                                    bg-accent-dark/80 text-gray-50 rounded-md text-xs break-all"
                     v-for="(event, index) in group" :class="{
                 'flex-row gap-4': isShort(event),
-                'outline outline-white bg-lime-500 right-0 md:right-0 left-[50%]': index >= 1,
+                'outline outline-white bg-accent-dark right-0 md:right-0 left-[50%]': index >= 1,
                 'pr-[50%]': index == 0 && group.length > 1
               }" :key="event.start.toString()" :style="{
                 top: dateToPercentOfDay(event.start) + '%',
@@ -505,8 +505,9 @@ onUnmounted(() => {
                   </div>
                 </div>
 
+                <!-- Other members' time slots -->
                 <div v-for="member in  meetingData.members " class="w-full h-full absolute pointer-events-none">
-                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="bg-lime-600 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
+                  <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="bg-accent-dark absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
                     py-2 px-1 md:px-2 md:py-2 overflow-hidden" :style="{
                 top: getTimeslotTop(slot) + '%', height: 'calc('
                   + getTimeslotHeight(slot) * 100 + '% - 1px)',
@@ -601,25 +602,27 @@ onUnmounted(() => {
       </div>
 
       <!-- Sidebar -->
-      <div class="w-full absolute bottom-0 px-3 md:py-8 bg-white border-t rounded-tr-2xl rounded-tl-2xl flex flex-col overflow-hidden
-                h-16 data-[expanded=true]:h-[80%] md:data-[expanded=true]:h-full
+      <div class="w-full absolute bottom-0 md:py-8 bg-white border-t rounded-tr-2xl rounded-tl-2xl flex flex-col overflow-hidden
+                h-48 data-[expanded=true]:h-[80%] md:data-[expanded=true]:h-full
                  md:h-full md:border-0 md:border-r md:rounded-none pointer-events-auto
                     shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] md:shadow-none z-10 transition-all"
         :data-expanded="bottomSheetExpanded">
 
         <!-- Sidebar head -->
         <div @click="toggleBottomSheet" @touchstart="bottomSheetSwipeStart"
-          class="w-full py-4 md:pt-0 flex flex-col items-center gap-4">
+          class="w-full py-4 md:pt-0 flex flex-col items-center gap-4 px-3">
           <div class="h-1 bg-slate-400 rounded-md w-12 md:hidden"></div> <!-- Drag-bar -->
-          <p class="text-xl text-slate-600">{{ meetingData.title || "Your Event" }}</p>
+          <p class="text-xl text-slate-600">
+            {{ meetingData.title || (userInfo.name ? userInfo.name + '\'s event' : "Your Event") }}
+          </p>
         </div>
 
-        <div class="h-full overflow-auto">
+        <div class="h-full overflow-auto px-3">
           <div class=" pb-8">
             <label class="text-gray-500 mt-4">Title</label>
             <input type="text" v-model="meetingData.title" @input="(_) => newMeetingStore.save()" name="title"
               maxlength="100"
-              class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5"
+              class="bg-gray-50 border border-gray-400 text-gray-800 text-sm rounded-lg block w-full p-2.5"
               placeholder="Event title (optional)" :required="false" />
 
             <!-- Timeslots by day -->
@@ -657,9 +660,8 @@ onUnmounted(() => {
 
     </div>
   </div>
-  <button class="absolute right-10 bg-blue-600 rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
-  text-white hover:bg-blue-500 bottom-24 md:bottom-10 flex gap-4"
-  @click="showInviteDialog = true">
+  <button class="absolute right-10 bg-accent rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
+  text-accent-800 hover:bg-accent-dark bottom-24 md:bottom-10 flex gap-4" @click="showInviteDialog = true">
     Invite others
     <font-awesome-icon icon="user-plus" class="" />
   </button>

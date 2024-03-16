@@ -5,18 +5,22 @@
   <div class="min-h-screen flex flex-col">
     <AppHeader :translucent="true" />
     <div class="flex-grow">
-      <section class="w-screen min-h-[50vh] flex items-center relative">
-        <div id="landing-bg" class="bg-gradient-to-r from-lime-200 to-lime-300"></div>
-        <div class="container mx-auto px-12">
-          <div class="max-w-md">
+      <section class="w-screen min-h-[50vh] flex items-center relative overflow-hidden">
+        <div id="landing-bg" class="absolute bg-gradient-to-r from-accent-light to-accent-300"></div>
+        <div class="container mx-auto mt-4 px-12 py-8 flex flex-col md:flex-row justify-between">
+          <div class="max-w-md mb-6">
             <h2 class="text-4xl font-bold">Busy friends can make scheduling hard</h2>
             <p class="text-black/70 text-xl mt-2 mb-12">But <span class="underline">meetme</span> makes it easy</p>
             <a class="bg-gray-800 text-white px-4 py-4 rounded-full hover:bg-gray-700
-            hover:ring-2 hover:ring-lime-300 transition-colors hover:shadow-xl"
-              href="/meeting/new">
+            hover:ring-2 hover:ring-white transition-colors hover:shadow-xl" href="/meeting/new">
               <font-awesome-icon icon="arrow-right" class="mr-2" /> Plan a meeting
             </a>
             <!-- <p class="text-gray-600 mt-4 italic text-sm">It's free!</p> -->
+          </div>
+          <div class="flex justify-end">
+            <div class="max-h-36 md:max-h-48 max-w-[80%]">
+              <img src="/share-preview.jpg" class="rounded-full m-auto mr-0 translate-x-5 md:translate-x-0 max-h-[100%] shadow-2xl" />
+            </div>
           </div>
         </div>
       </section>
@@ -98,10 +102,6 @@
 </template>
 
 <style lang="scss">
-body {
-  overflow: hidden;
-}
-
 #landing-bg {
   transform: rotate(-1.2deg);
   left: -100px;

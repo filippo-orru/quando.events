@@ -33,6 +33,18 @@ function copyLink() {
   let link = window.location.href;
   navigator.clipboard.writeText(link);
 }
+
+function shareWhatsapp() {
+  let link = window.location.href;
+  let url = `https://wa.me/send?text=${encodeURIComponent(link)}`;
+  window.open(url, '_blank');
+}
+
+function shareTelegram() {
+  let link = window.location.href;
+  let url = `https://t.me/share/url?url=${encodeURIComponent(link)}`;
+  window.open(url, '_blank');
+}
 </script>
 
 <template>
@@ -47,7 +59,7 @@ function copyLink() {
               <span v-else>{{ getNameInitials(member.name) }}</span>
             </Transition>
           </div>
-          <span class="flex-1 bg-gray-100 text-gray-800 text-sm rounded-lg focus:ring-blue-200 block w-full p-2.5">
+          <span class="flex-1 bg-gray-100 text-gray-800 text-sm rounded-lg block w-full p-2.5">
             {{ member.name }}
           </span>
         </div>
@@ -55,31 +67,47 @@ function copyLink() {
     </div>
 
     <!-- Divider -->
-    <div class="border-t border-gray-200 my-6"></div>
+    <div v-if="meetingData.members.length > 1" class="border-t border-gray-400 my-12"></div>
+    <div v-else class="mt-8"></div>
 
     <!-- Mock social share card -->
-    <div class="flex flex-row gap-4 bg-gray-100 rounded-lg shadow-md overflow-hidden">
+    <div class="flex flex-row gap-4 bg-gray-100 rounded-lg shadow-lg overflow-hidden">
       <img class="w-[40%]" src="/share-preview.jpg" />
-      <div class="p-4">
-        <span class="flex-1 text-gray-800 text-sm focus:ring-blue-200 block w-full p-2.5">
-          Join '{{ meetingData.title }}' by {{ userStore.name }}
+      <div class="p-4 flex items-center">
+        <span class="italic text-gray-800 text-xl my-auto">
+          Join {{ meetingData.title }} by {{ userStore.name }}
         </span>
       </div>
     </div>
 
     <!-- share buttons row -->
-    <div class="flex mt-4
-      *:rounded-full *:h-12 *:w-12 *:mr-4 *:flex *:items-center *:justify-center *:text-white *:p-2">
-      <button class="bg-blue-500 hover:bg-blue-600" @click="copyLink()">
-        <font-awesome-icon :icon="['fas', 'link']" />
-      </button>
+    <div class="flex mt-6 gap-4">
+      <div class="flex flex-col gap-2 items-center">
+        <button class="bg-accent hover:bg-accent-dark
+        text-lg shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="copyLink()">
+          <font-awesome-icon :icon="['fas', 'link']" />
+        </button>
+        Copy link
+      </div>
+      <div class="flex flex-col gap-2 items-center">
+        <button class="bg-green-500 hover:bg-green-600
+        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="shareWhatsapp()">
+          <font-awesome-icon :icon="['fab', 'whatsapp']" />
+        </button>
+        WhatsApp
+      </div>
+      <div class="flex flex-col gap-2 items-center">
+        <button class="bg-sky-500 hover:bg-sky-600
+        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="shareTelegram()">
+          <font-awesome-icon :icon="['fab', 'telegram']" />
+        </button>
+        Telegram
+      </div>
     </div>
 
+
     <div class="mt-4 float-right">
-      <button type="button" class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-sky-100 text-blue-900/80 
-        hover:bg-sky-200 
-        disabled:opacity-50 disabled:cursor-not-allowed
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      <button type="button" class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-accent-light/50 text-accent-800 hover:bg-accent-light"
         @click="closeModal()">
         Done
       </button>
