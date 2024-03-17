@@ -17,6 +17,9 @@ services:
       traefik.http.routers.meetme.entrypoints: "https"
       traefik.http.routers.meetme.tls: "true"
       traefik.http.services.meetme.loadbalancer.server.port: "3000"
+    networks:
+      - default
+      - traefik
 
   redis:
     image: redis:latest
@@ -24,3 +27,8 @@ services:
       - 6379
     volumes:
       - ./redis-data:/data
+
+networks:
+  traefik:
+    external: true
+    name: traefik_proxy
