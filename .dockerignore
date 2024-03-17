@@ -3,3 +3,6 @@ redis-data
 .output
 .nuxt
 .DS_Store
+docker-compose.yml
+Dockerfile
+README.md
