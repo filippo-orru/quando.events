@@ -1,3 +1,7 @@
+# Mine
+redis-data/
+!redis-data/.gitkeep
+
 # Nuxt dev/build outputs
 .output
 .data

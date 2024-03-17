@@ -1,0 +1,5 @@
+node_modules
+redis-data
+.output
+.nuxt
+.DS_Store

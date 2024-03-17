@@ -1,7 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  baseURL: 'https://quando.events',
   app: {
     head: {
       'link': [
@@ -40,6 +39,9 @@ export default defineNuxtConfig({
     '@pinia-plugin-persistedstate/nuxt',
   ],
   runtimeConfig: {
+    redis: {
+      host: process.env.REDIS_HOST,
+    },
     public: {
       googleInfo: {
         clientId: process.env.GOOGLE_CLIENT_ID,
@@ -48,6 +50,11 @@ export default defineNuxtConfig({
     },
   },
   nitro: {
+    baseURL: 'https://quando.events',
+    prerender: {
+      crawlLinks: true,
+      failOnError: false, 
+    },
     experimental: {
       websocket: true
     },

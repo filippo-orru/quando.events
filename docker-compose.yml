@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - 3000
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_HOST=redis
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.filippo-orru.rule: "Host(`quando.events`, `www.quando.events`)"
+      traefik.http.routers.filippo-orru.entrypoints: "https"
+      traefik.http.routers.filippo-orru.tls: "true"
+      traefik.http.services.filippo-orru.loadbalancer.server.port: "3000"
+
+  redis:
+    image: redis:latest
+    expose:
+      - 6379
+    volumes:
+      - ./redis-data:/data
