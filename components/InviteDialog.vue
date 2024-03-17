@@ -75,7 +75,7 @@ function shareTelegram() {
       <img class="w-[40%]" src="/share-preview.jpg" />
       <div class="p-4 flex items-center">
         <span class="italic text-gray-800 text-xl my-auto">
-          Join {{ meetingData.title }} by {{ userStore.name }}
+          {{ meetingData.title && `Join ${meetingData.title} by ${userStore.name}` || `Join a meeting by ${userStore.name}` }}
         </span>
       </div>
     </div>
