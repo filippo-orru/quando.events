@@ -20,7 +20,7 @@ export default defineNuxtConfig({
     '@fortawesome/fontawesome-svg-core/styles.css'
   ],
   routeRules: {
-    '/': { prerender: true },
+    '/': { prerender: false },
     '/meeting/:meetingId': { ssr: false },
   },
   postcss: {
@@ -50,25 +50,13 @@ export default defineNuxtConfig({
     },
   },
   nitro: {
-    baseURL: 'https://quando.events',
+    baseURL: '/',
     prerender: {
       crawlLinks: true,
-      failOnError: false, 
+      failOnError: false,
     },
     experimental: {
       websocket: true
-    },
-    storage: {
-      "redis:users": {
-        driver: 'redis',
-        host: '127.0.0.1',
-        port: 6379,
-      },
-      "redis:meetings": {
-        driver: 'redis',
-        host: '127.0.0.1',
-        port: 6379,
-      },
     },
   },
 });
