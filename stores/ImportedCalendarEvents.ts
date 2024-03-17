@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { dateIsBetween } from './NewMeetingStore'
 import type { CalendarEntry, CalendarImportSource, ImportedCalendarEntry } from '~/data/Meeting';
 import { add, set } from 'date-fns';
 
