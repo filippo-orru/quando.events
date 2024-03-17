@@ -1,4 +1,4 @@
-import { CalendarTimeslot, CalendarTimeslotSerialized } from "~/data/Meeting";
+import { CalendarTimeslotSerialized } from "~/data/Meeting";
 import { updateMeeting } from "~/server/utils/db/meetings";
 
 export type UpdateMeeting = {

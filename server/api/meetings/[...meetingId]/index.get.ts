@@ -1,5 +1,5 @@
-import { MeetingSerialized, serializeMeeting } from "~/data/Meeting";
-import { Meeting, getMeeting } from "~/server/utils/db/meetings";
+import { MeetingSerialized } from "~/data/Meeting";
+import { getMeeting } from "~/server/utils/db/meetings";
 
 
 export default defineEventHandler(async (event) => {
