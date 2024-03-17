@@ -30,7 +30,9 @@ export const useUserInfoStore = defineStore('userInfoStore', {
     },
   },
 
-  persist: true,
+  persist: {
+    storage: window.localStorage
+  },
 })
 
 // debounced

@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { dateIsBetween } from './NewMeetingStore'
-import type { CalendarEntry } from '~/data/Meeting';
+import type { CalendarEntry, CalendarImportSource, ImportedCalendarEntry } from '~/data/Meeting';
 import { add, set } from 'date-fns';
 
 type ImportedCalendarEventsStore = {
-  events: CalendarEntry[];
+  events: ImportedCalendarEntry[];
 };
 
 type StoredCalendarEntry = {
@@ -12,6 +12,7 @@ type StoredCalendarEntry = {
   start: number;
   end: number;
   title: string;
+  source: CalendarImportSource;
 };
 
 export const useImportedCalendarEventsStore = defineStore({
@@ -25,7 +26,7 @@ export const useImportedCalendarEventsStore = defineStore({
         'end': add(hintEventStart, { hours: 3 }),
         title: 'Click to show your own calendar events!'
       }
-    ] as CalendarEntry[];
+    ] as ImportedCalendarEntry[];
 
     return { events: events }
   },
@@ -48,11 +49,15 @@ export const useImportedCalendarEventsStore = defineStore({
     },
   },
   actions: {
-    addEvents(newEvents: CalendarEntry[]) {
+    addEvents(newEvents: ImportedCalendarEntry[]) {
       this.events.push(...newEvents.filter((newEvent) => !this.events.some((event) => event.id === newEvent.id)));
+    },
+    clear(source: CalendarImportSource) {
+      this.events = this.events.filter((event) => event.source !== source);
     }
   },
   persist: {
+    storage: window.localStorage,
     serializer: {
       serialize: (value) => {
         let v = value as ImportedCalendarEventsStore;
@@ -78,7 +83,8 @@ export const useImportedCalendarEventsStore = defineStore({
               start: new Date(event.start),
               end: new Date(event.end),
               title: event.title,
-            })),
+              source: event.source,
+            } as ImportedCalendarEntry)),
           } as ImportedCalendarEventsStore;
         }
       }

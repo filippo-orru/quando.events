@@ -1,6 +1,6 @@
 import { useScriptTag } from '@vueuse/core';
 import { defineStore } from 'pinia'
-import type { CalendarEntry } from '~/data/Meeting';
+import type { CalendarEntry, ImportedCalendarEntry } from '~/data/Meeting';
 
 type GoogleCalendarStore = {
   token: google.accounts.oauth2.TokenResponse | null;
@@ -68,6 +68,11 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
         importGoogleCalendarEvents();
       }
     },
+
+    remove() {
+      this.token = null;
+      useImportedCalendarEventsStore().clear('google');
+    }
   },
   getters: {
     googleInfo: () => {
@@ -143,7 +148,8 @@ async function importGoogleCalendarEvents() {
       title: event.summary,
       start: start,
       end: end,
-    } as CalendarEntry;
+      source: 'google',
+    } as ImportedCalendarEntry;
   });
   importedEventsStore.addEvents(calendarEntries);
 }

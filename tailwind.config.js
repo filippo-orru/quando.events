@@ -13,6 +13,7 @@ export default {
       colors: {
         'accent': '#F0ADB4',
         'accent-light': '#FFCED3',
+        'accent-100': '#F0ADB4',
         'accent-dark': '#D18F95',
         'accent-800': '#6B2D31',
 

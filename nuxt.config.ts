@@ -19,6 +19,10 @@ export default defineNuxtConfig({
     '~/assets/css/main.css',
     '@fortawesome/fontawesome-svg-core/styles.css'
   ],
+  routeRules: {
+    '/': { prerender: true },
+    '/meeting/:meetingId': { ssr: false },
+  },
   postcss: {
     plugins: {
       tailwindcss: {},

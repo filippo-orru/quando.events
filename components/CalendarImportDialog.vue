@@ -37,9 +37,18 @@ googleCalendar.init();
                 Google Calendar
             </button>
             <div v-else
-                class="flex items-center justify-center rounded-md border border-transparent bg-secondary-100/60 text-secondary px-4 py-2 text-sm font-medium focus-visible:ring-secondary-800">
-                <font-awesome-icon :icon="['fab', 'google']" class="mr-3" />
-                Connected to Google Calendar
+                class="flex items-center justify-between rounded-md border border-transparent bg-secondary-100/60 text-secondary px-4 py-2 text-sm font-medium focus-visible:ring-secondary-800">
+                <button class="invisible text-secondary-800">
+                    <!-- For spacing -->
+                    <font-awesome-icon :icon="['fas', 'times']" />
+                </button>
+                <div class="px-2">
+                    <font-awesome-icon :icon="['fab', 'google']" class="mr-3" />
+                    Connected to Google Calendar
+                </div>
+                <button class="text-secondary-800 rounded-full hover:bg-secondary/50 flex items-center justify-center h-8 w-8" @click="googleCalendar.remove()">
+                    <font-awesome-icon :icon="['fas', 'times']" />
+                </button>
             </div>
 
             <!-- <button type="button"

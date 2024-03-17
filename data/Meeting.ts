@@ -68,3 +68,9 @@ export interface CalendarEntry extends CalendarTimeslot {
     id: String;
     title: string;
 };
+
+export type CalendarImportSource = 'google';
+
+export interface ImportedCalendarEntry extends CalendarEntry {
+    source: CalendarImportSource
+};

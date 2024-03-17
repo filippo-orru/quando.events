@@ -377,11 +377,11 @@ onUnmounted(() => {
 
 <template>
   <div class="w-full h-full flex flex-col overflow-hidden relative">
-    <!-- Meet me header -->
+    <!-- app header -->
     <div class="flex-shrink-0 flex items-center justify-start gap-4 py-4 px-4 text-slate-500 border-b">
       <a href="/" class="ml-4 hover:underline text-xl flex gap-3 items-center">
-        <img src="/apple-touch-icon.png" alt="Meet me logo" class="h-8 w-8 rounded-md shadow-md" />
-        Meet me
+        <img src="/apple-touch-icon.png" alt="Logo" class="h-8 w-8 rounded-md shadow-md" />
+        quando.events
       </a>
     </div>
     <!-- actual content -->
