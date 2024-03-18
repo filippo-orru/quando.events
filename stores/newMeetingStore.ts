@@ -30,6 +30,11 @@ export function getStartOfTheWeek(from: Date) {
     return startOfTheWeek;
 }
 
+interface CalendarTimeslotWithId extends CalendarTimeslot {
+    id: string;
+}
+
+
 interface NewMeetingStore {
     meetingId: string;
     data: MeetingData | null | 'error';
@@ -72,7 +77,7 @@ const newMeetingStore = (meetingId: string) => defineStore(`NewMeetingStore-${me
                 this.data = {
                     title: newMeeting.title,
                     members: newMeeting.members.filter((member) => member.id !== userStore.id),
-                    selectedTimes: myMember && myMember.times || []
+                    selectedTimes: (myMember && myMember.times || [])
                 }
             }
         },
