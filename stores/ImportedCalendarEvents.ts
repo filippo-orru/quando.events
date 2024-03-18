@@ -20,11 +20,11 @@ export const useImportedCalendarEventsStore = defineStore({
     let hintEventStart = set(getStartOfTheWeek(new Date()), { hours: 14, minutes: 30 });
 
     let events = [
-      {
-        'start': hintEventStart,
-        'end': add(hintEventStart, { hours: 3 }),
-        title: 'Click to show your own calendar events!'
-      }
+      // {
+      //   'start': hintEventStart,
+      //   'end': add(hintEventStart, { hours: 3 }),
+      //   title: 'Click to show your own calendar events!'
+      // }
     ] as ImportedCalendarEntry[];
 
     return { events: events }
