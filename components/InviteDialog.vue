@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 
-let props = defineProps<{
-  meetingId: string
+const props = defineProps<{
+  meetingId: string,
   isOpen: boolean,
-  closeModal: () => void
+  closeModal: () => void,
 }>();
 
 let meetingStore = useNewMeetingStore(props.meetingId);
@@ -11,20 +11,32 @@ let meetingData = meetingStore.data as MeetingData;
 
 let userStore = useUserInfoStore()
 
+let copiedLink = ref(false);
+
 function copyLink() {
   let link = window.location.href;
   navigator.clipboard.writeText(link);
+  copiedLink.value = true;
+  setTimeout(() => {
+    copiedLink.value = false;
+  }, 2000);
 }
 
 function shareWhatsapp() {
   let link = window.location.href;
-  let url = `https://wa.me/send?text=${encodeURIComponent(link)}`;
+  let url = `https://wa.me/?text=${encodeURIComponent(link)}`;
   window.open(url, '_blank');
 }
 
 function shareTelegram() {
   let link = window.location.href;
   let url = `https://t.me/share/url?url=${encodeURIComponent(link)}`;
+  window.open(url, '_blank');
+}
+
+function shareMail() {
+  let link = window.location.href;
+  let url = `mailto:?subject=Join my meeting&body=${encodeURIComponent(link)}`;
   window.open(url, '_blank');
 }
 </script>
@@ -53,16 +65,20 @@ function shareTelegram() {
         <span class="italic text-gray-800 text-xl my-auto">
           {{ meetingData.title && `Join ${meetingData.title} by ${userStore.name}` || `Join a meeting by
           ${userStore.name}` }}
+          <!-- TODO use organizer name -->
         </span>
       </div>
     </div>
 
     <!-- share buttons row -->
-    <div class="flex mt-6 gap-4">
+    <div class="flex mt-6 gap-4 justify-evenly">
       <div class="flex flex-col gap-2 items-center">
         <button class="bg-accent hover:bg-accent-dark
         text-lg shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="copyLink()">
-          <font-awesome-icon :icon="['fas', 'link']" />
+          <Transition name="fade" mode="out-in">
+            <font-awesome-icon v-if="copiedLink" :icon="['fas', 'check']" />
+            <font-awesome-icon v-else :icon="['fas', 'link']" />
+          </Transition>
         </button>
         Copy link
       </div>
@@ -82,10 +98,18 @@ function shareTelegram() {
         </button>
         Telegram
       </div>
+      <div class="flex flex-col gap-2 items-center">
+        <button class="bg-blue-600 hover:bg-blue-700
+        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2"
+          @click="shareMail()">
+          <font-awesome-icon :icon="['fas', 'envelope']" />
+        </button>
+        Mail
+      </div>
     </div>
 
 
-    <div class="mt-4 float-right">
+    <div class="mt-6 float-right">
       <button type="button"
         class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-accent-light/50 text-accent-800 hover:bg-accent-light"
         @click="closeModal()">
@@ -96,13 +120,5 @@ function shareTelegram() {
 </template>
 
 <style>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s;
-}
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
 </style>
