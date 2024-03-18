@@ -209,6 +209,7 @@ function removeTimeslot(day: Date, slot: CalendarTimeslot) {
 }
 
 let bottomSheetExpanded: Ref<boolean> = useState('bottomSheetExpanded', () => false);
+let bottomSheetScrollViewportRef = ref<HTMLDivElement>();
 
 function toggleBottomSheet() {
   bottomSheetExpanded.value = !bottomSheetExpanded.value;
@@ -221,14 +222,31 @@ function bottomSheetSwipeStart(event: TouchEvent) {
 let minMoveDelta: number;
 let minMomentum: number = 1;
 
+// Used to detect movement direction and prevent swipe to refresh
+let bottomSheetSwipeStartFromAnywhere: number | null = null;
+function bottomSheetSwipeStartFromBody(event: TouchEvent) {
+  bottomSheetSwipeStartFromAnywhere = event.touches[0].screenY;
+}
+
 function bottomSheetSwipeMove(event: TouchEvent) {
-  if (event.touches.length != 1 || !swipeStart) {
+  if (event.touches.length != 1) {
     swipeStart = null;
     return;
   }
 
+  let touchY = event.touches[0].screenY;
+  if (!swipeStart) {
+    if (bottomSheetScrollViewportRef.value?.scrollTop == 0 &&
+      bottomSheetSwipeStartFromAnywhere && bottomSheetSwipeStartFromAnywhere - touchY < 0) {
+      // Prevent accidental swipe to refresh
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    return;
+  }
+
   let swipeStartY = swipeStart.y;
-  let delta = event.touches[0].screenY - swipeStartY!;
+  let delta = touchY - swipeStartY!;
   let momentum = delta / (new Date().getTime() - swipeStart.time);
 
   if (bottomSheetExpanded.value && (delta > minMoveDelta || momentum > minMomentum)) {
@@ -236,8 +254,14 @@ function bottomSheetSwipeMove(event: TouchEvent) {
   } else if (!bottomSheetExpanded.value && (delta < -minMoveDelta) || momentum < -minMomentum) {
     bottomSheetExpanded.value = true;
   }
+
+  // debugger
   event.preventDefault();
   event.stopPropagation();
+}
+
+function bottomSheetSwipeEnd(event: TouchEvent) {
+  swipeStart = null;
 }
 
 let brands = ['google']; // , 'microsoft', 'apple'
@@ -593,8 +617,7 @@ onUnmounted(() => {
                 <span class="w-12 flex-shrink-0"></span>
                 <div v-for="(day, index) in   getDaysOfTimeRange(currentRangeStart)  "
                   class="flex-1 h-full relative border-r border-gray-200" :class="{ 'border-l': index == 0 }"
-                  :key="day.date.toString()" 
-                  @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
+                  :key="day.date.toString()" @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
                   @mouseup="(event) => dragTimeslotEnd(event.screenY)"
                   @touchmove="(event) => dragTimeslotMove(event, event.touches[0] && event.touches[0].screenY, true)"
                   @touchend="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)">
@@ -646,7 +669,7 @@ onUnmounted(() => {
                       <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
                         <!-- add time slot -->
                         <button v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-accent-light rounded-md flex items-center justify-center
-                                    opacity-0 active:opacity-100 md:hover:opacity-100 transition-opacity"
+                                    opacity-[1%] active:opacity-100 md:hover:opacity-100 transition-opacity"
                           @click="addTimeslotViaTap(day.date, hour - 1)">
                           <font-awesome-icon icon="plus" class="text-accent-800" />
                         </button>
@@ -704,8 +727,8 @@ onUnmounted(() => {
                         </div>
                       </div>
                       <!-- Drag handles -->
-                      <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-2 top-0 left-1 md:right-1 -translate-y-1/2
-                                    md:translate-y-0 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                      <div class="absolute bg-white border-4 border-accent cursor-pointer md:border-2 rounded-full p-1.5 top-0 left-1 right-1 -translate-y-1/2
+                                     transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         @mousedown="(event) => dragTimeslotStart(event, slot, 'start', event.screenY)"
                         @touchstart="(event) => dragTimeslotStart(event, slot, 'start', event.touches[0] && event.touches[0].screenY)">
                         <!-- Hover indicator -->
@@ -714,8 +737,8 @@ onUnmounted(() => {
                           <font-awesome-icon icon="caret-up" />
                         </div>
                       </div>
-                      <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-2 bottom-0 right-1 md:left-1 translate-y-1/2
-                                    md:translate-y-0 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                      <div class="absolute bg-white border-4 border-accent cursor-pointer md:border-2 rounded-full p-1.5 bottom-0 right-1 left-1 translate-y-1/2
+                                     transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         @mousedown="(event) => dragTimeslotStart(event, slot, 'end', event.screenY)"
                         @touchstart="(event) => dragTimeslotStart(event, slot, 'end', event.touches[0] && event.touches[0].screenY)">
                         <!-- Hover indicator -->
@@ -745,7 +768,8 @@ onUnmounted(() => {
       <!-- Sidebar / bottom bar -->
 
       <div class="flex-shrink-0 absolute top-0 w-full h-full md:relative md:p-2 md:w-64 pointer-events-none"
-        @touchmove="bottomSheetSwipeMove">
+        @touchstart.passive="bottomSheetSwipeStartFromBody" @touchmove="bottomSheetSwipeMove"
+        @touchend="bottomSheetSwipeEnd">
 
         <!-- Sidebar bg overlay -->
         <div class="w-full h-full absolute transition-all md:hidden"
@@ -773,7 +797,7 @@ onUnmounted(() => {
             </p>
           </div>
 
-          <div class="h-full overflow-auto px-3">
+          <div class="h-full overflow-auto px-3" ref="bottomSheetScrollViewportRef">
             <div class=" pb-8">
               <label class="text-gray-500 mt-4">Title</label>
               <input type="text" v-model="meetingData.title" @input="(_) => newMeetingStore.save()" name="title"
