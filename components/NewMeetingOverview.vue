@@ -2,6 +2,20 @@
 import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration, getDay, getDate } from "date-fns";
 import { type CalendarTimeslot } from '~/data/Meeting';
 
+useHead({
+  title: "quando.events",
+  meta: [
+    {
+      name: "description",
+      content: "Schedule a new meeting with quando.events"
+    },
+    {
+      name: "viewport",
+      content: "width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    }
+  ]
+});
+
 let props = defineProps<{
   meetingId: string,
 }>();
@@ -168,6 +182,7 @@ function mergeOverlappingTimeslots() {
 }
 
 function addTimeslotViaTap(day: Date, hour: number) {
+  console.log("add")
   // Delay for a bit to allow the user to see the button press
   setTimeout(() => {
     meetingData.value.selectedTimes.push({
@@ -199,23 +214,30 @@ function toggleBottomSheet() {
   bottomSheetExpanded.value = !bottomSheetExpanded.value;
 }
 
-let swipeStartY: number | null = null;
+let swipeStart: { y: number, time: number } | null = null;
 function bottomSheetSwipeStart(event: TouchEvent) {
-  swipeStartY = event.touches[0].screenY;
+  swipeStart = { y: event.touches[0].screenY, time: new Date().getTime() };
 }
 let minMoveDelta: number;
+let minMomentum: number = 1;
+
 function bottomSheetSwipeMove(event: TouchEvent) {
-  if (event.touches.length != 1 || !swipeStartY) {
-    swipeStartY = null;
+  if (event.touches.length != 1 || !swipeStart) {
+    swipeStart = null;
     return;
   }
 
+  let swipeStartY = swipeStart.y;
   let delta = event.touches[0].screenY - swipeStartY!;
-  if (bottomSheetExpanded.value && delta > minMoveDelta) {
+  let momentum = delta / (new Date().getTime() - swipeStart.time);
+
+  if (bottomSheetExpanded.value && (delta > minMoveDelta || momentum > minMomentum)) {
     bottomSheetExpanded.value = false;
-  } else if (!bottomSheetExpanded.value && delta < -minMoveDelta) {
+  } else if (!bottomSheetExpanded.value && (delta < -minMoveDelta) || momentum < -minMomentum) {
     bottomSheetExpanded.value = true;
   }
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 let brands = ['google']; // , 'microsoft', 'apple'
@@ -424,7 +446,7 @@ function getFullOverlapTimeslots(slots: CalendarTimeslot[]): OverlapSlot[] {
 };
 
 function hideTextInTimeslot(slot: CalendarTimeslot): boolean {
-  let isFullOverlap = meetingData.value.members.every((member) =>{
+  let isFullOverlap = meetingData.value.members.every((member) => {
     if (member.id == userInfo.id) return true;
     return member.times.some((slot2) => slot2.start <= slot.start && slot2.end > slot.start);
   });
@@ -571,7 +593,8 @@ onUnmounted(() => {
                 <span class="w-12 flex-shrink-0"></span>
                 <div v-for="(day, index) in   getDaysOfTimeRange(currentRangeStart)  "
                   class="flex-1 h-full relative border-r border-gray-200" :class="{ 'border-l': index == 0 }"
-                  :key="day.date.toString()" @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
+                  :key="day.date.toString()" 
+                  @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
                   @mouseup="(event) => dragTimeslotEnd(event.screenY)"
                   @touchmove="(event) => dragTimeslotMove(event, event.touches[0] && event.touches[0].screenY, true)"
                   @touchend="(event) => dragTimeslotEnd(event.touches[0] && event.touches[0].screenY)">
@@ -622,11 +645,11 @@ onUnmounted(() => {
                     <div class="absolute w-full h-full flex flex-col" :class="{ 'hidden': draggingTimeslotPosition }">
                       <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
                         <!-- add time slot -->
-                        <div v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-accent-light rounded-md flex items-center justify-center
+                        <button v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-accent-light rounded-md flex items-center justify-center
                                     opacity-0 active:opacity-100 md:hover:opacity-100 transition-opacity"
                           @click="addTimeslotViaTap(day.date, hour - 1)">
                           <font-awesome-icon icon="plus" class="text-accent-800" />
-                        </div>
+                        </button>
                       </div>
                     </div>
 
@@ -663,7 +686,7 @@ onUnmounted(() => {
                       </div>
                     </div>
 
-                    <!-- Time slots: drag handles -->
+                    <!-- Time slots: drag areas -->
                     <div v-for="slot in  meetingData.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
                       :key="slot.start.toString()"
                       class="absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-xs group"
@@ -681,7 +704,7 @@ onUnmounted(() => {
                         </div>
                       </div>
                       <!-- Drag handles -->
-                      <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-1 top-0 left-1 md:right-1 -translate-y-1/2
+                      <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-2 top-0 left-1 md:right-1 -translate-y-1/2
                                     md:translate-y-0 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         @mousedown="(event) => dragTimeslotStart(event, slot, 'start', event.screenY)"
                         @touchstart="(event) => dragTimeslotStart(event, slot, 'start', event.touches[0] && event.touches[0].screenY)">
@@ -691,7 +714,7 @@ onUnmounted(() => {
                           <font-awesome-icon icon="caret-up" />
                         </div>
                       </div>
-                      <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-1 bottom-0 right-1 md:left-1 translate-y-1/2
+                      <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-2 bottom-0 right-1 md:left-1 translate-y-1/2
                                     md:translate-y-0 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         @mousedown="(event) => dragTimeslotStart(event, slot, 'end', event.screenY)"
                         @touchstart="(event) => dragTimeslotStart(event, slot, 'end', event.touches[0] && event.touches[0].screenY)">
@@ -722,16 +745,21 @@ onUnmounted(() => {
       <!-- Sidebar / bottom bar -->
 
       <div class="flex-shrink-0 absolute top-0 w-full h-full md:relative md:p-2 md:w-64 pointer-events-none"
-        @touchmove.passive="bottomSheetSwipeMove">
+        @touchmove="bottomSheetSwipeMove">
 
-        <!-- Sidebar with bg overlay -->
+        <!-- Sidebar bg overlay -->
+        <div class="w-full h-full absolute transition-all md:hidden"
+          :class="{ 'bg-black/40 pointer-events-auto': bottomSheetExpanded }" @click="bottomSheetExpanded = false">
+        </div>
+
+        <!-- Sidebar hint shadow -->
         <div class="w-full h-full absolute transition-all md:hidden"
           :class="{ 'bg-black/40 pointer-events-auto': bottomSheetExpanded }" @click="bottomSheetExpanded = false">
         </div>
 
         <!-- Sidebar -->
-        <div class="w-full absolute bottom-0 md:py-8 bg-white border-t rounded-tr-2xl rounded-tl-2xl flex flex-col overflow-hidden
-                h-48 data-[expanded=true]:h-[80%] md:data-[expanded=true]:h-full
+        <div class="w-full absolute bottom-0 md:py-8 bg-white border-t rounded-tr-3xl rounded-tl-3xl flex flex-col overflow-hidden
+                h-20 data-[expanded=true]:h-[80%] md:data-[expanded=true]:h-full
                  md:h-full md:border-0 md:border-r md:rounded-none pointer-events-auto
                     shadow-[0_-5px_11px_0_rgba(0,0,0,0.1)] md:shadow-none z-10 transition-all"
           :data-expanded="bottomSheetExpanded">
@@ -741,7 +769,7 @@ onUnmounted(() => {
             class="w-full py-4 md:pt-0 flex flex-col items-center gap-4 px-3">
             <div class="h-1 bg-slate-400 rounded-md w-12 md:hidden"></div> <!-- Drag-bar -->
             <p class="text-xl text-slate-600">
-              {{ meetingData.title || (userInfo.name ? userInfo.name + '\'s event' : "Your Event") }}
+              {{ meetingData.title || "Event Details" }}
             </p>
           </div>
 
@@ -790,7 +818,7 @@ onUnmounted(() => {
     </div>
   </div>
   <button class="absolute right-4 md:right-10 bg-accent rounded-full h-12 mt-auto flex px-6 items-center justify-center cursor-pointer shadow-xl
-  text-accent-800 hover:bg-accent-dark bottom-56 md:bottom-10 flex gap-4" @click="showInviteDialog = true">
+  text-accent-800 hover:bg-accent-dark bottom-24 md:bottom-10 flex gap-4" @click="showInviteDialog = true">
     Invite others
     <font-awesome-icon icon="user-plus" class="" />
   </button>
