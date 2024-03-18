@@ -319,7 +319,7 @@ function weekSwipeEnd(event: TouchEvent) {
   swipeStartX = null;
 }
 
-function scrollToNow() {
+function scrollToNow(smooth: boolean = true) {
   let thisMonday = getStartOfTheWeek(now.value);
   if (currentWeek.value != thisMonday) {
     weekTransitionDirection.value = currentWeek.value < thisMonday;
@@ -329,7 +329,7 @@ function scrollToNow() {
   let scrollHeight = scrollViewportRef.value!.scrollHeight;
   let top = scrollHeight * dateToPercentOfDay(now.value) / 100 - 150;
   // console.console.log(scrollHeight, '*', dateToPercentOfDay(now.value) / 100, '-', 150, '=', top);
-  scrollViewportRef.value!.scrollTo({ top: top });
+  scrollViewportRef.value!.scrollTo({ top: top, behavior: smooth ? 'smooth' : 'auto' });
 }
 
 function getTimeslotsByDay(slots: CalendarTimeslot[]) {
@@ -363,7 +363,7 @@ onMounted(() => {
   locale = navigator.languages[0] || 'en-US';
 
   nextTick(() => {
-    scrollToNow();
+    scrollToNow(false);
     viewportIsReady.value = true;
   });
 });
@@ -378,11 +378,13 @@ onUnmounted(() => {
 <template>
   <div class="w-full h-full flex flex-col overflow-hidden relative">
     <!-- app header -->
-    <div class="flex-shrink-0 flex items-center justify-start gap-4 py-4 px-4 text-slate-500 border-b">
-      <a href="/" class="ml-4 hover:underline text-xl flex gap-3 items-center">
-        <img src="/apple-touch-icon.png" alt="Logo" class="h-8 w-8 rounded-md shadow-md" />
+    <div
+      class="flex-shrink-0 bg-accent-light flex items-center justify-start gap-4 py-4 px-4 text-accent-800 shadow-sm z-20">
+      <a href="/" class="ml-4 hover:underline font-bold flex gap-3 items-center">
         quando.events
       </a>
+      <div>
+      </div>
     </div>
     <!-- actual content -->
     <div class="flex-1 h-full flex flex-col overflow-hidden md:flex-row-reverse select-none">
@@ -394,7 +396,7 @@ onUnmounted(() => {
               <!-- Today button, left / right chevrons to navigate weeks, current month -->
               <button
                 class="mr-4 flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
-                @click="scrollToNow">
+                @click="scrollToNow()">
                 Today
               </button>
 

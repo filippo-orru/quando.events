@@ -71,7 +71,7 @@ googleCalendar.init();
 
         <div class="mt-4 float-right">
             <button type="button"
-                class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-secondary-800/80 hover:bg-secondary-100 focus-visible:ring-secondary-800"
+                class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-accent-light/50 text-accent-800 hover:bg-accent-light"
                 @click="props.closeModal">
                 Done
             </button>

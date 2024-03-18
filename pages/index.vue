@@ -55,7 +55,7 @@ onUnmounted(() => {
         </div>
       </section>
       <div class="container max-w-screen-lg mx-auto px-12">
-        <section class="md:flex">
+        <section class="lg:flex gap-6 justify-between">
           <div>
             <h2 class="text-3xl font-bold mt-12">
               How it works
@@ -122,7 +122,7 @@ onUnmounted(() => {
           </div>
           
           <div>
-            <img src="/screenshot.png" class="mt-6 w-96 border-2 shadow-xl rounded-lg" />
+            <img src="/screenshot.png" class="mt-6 w-96 border-2 shadow-xl rounded-lg mx-auto lg:mx-0" />
           </div>
         </section>
         <section class="container">

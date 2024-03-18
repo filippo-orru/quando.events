@@ -9,25 +9,7 @@ let props = defineProps<{
 let meetingStore = useNewMeetingStore(props.meetingId);
 let meetingData = meetingStore.data as MeetingData;
 
-let userStore = useUserInfoStore();
-
-
-function isSet(name: string | null) {
-  return name && name.length > 1;
-}
-
-function nameIsReady(name: string) {
-  return isSet(name);
-}
-
-function getNameInitials(name: string) {
-  let split = name.trim().toUpperCase().split(' ');
-  if (split.length > 1) {
-    return split.slice(0, 2).map((name) => name.charAt(0)).join('');
-  } else {
-    return split[0].slice(0, 2);
-  }
-}
+let userStore = useUserInfoStore()
 
 function copyLink() {
   let link = window.location.href;
@@ -49,16 +31,11 @@ function shareTelegram() {
 
 <template>
 
-  <SimpleDialog title="Invite" :is-open="isOpen" :close-modal="closeModal">
+  <SimpleDialog title="Invite others" :is-open="isOpen" :close-modal="closeModal">
     <div class="flex flex-col gap-4">
       <div v-for="member in meetingData.members">
         <div class="flex">
-          <div class="rounded-full bg-slate-400 h-10 w-10 mr-4 flex items-center justify-center text-white p-2">
-            <Transition name="fade" mode="out-in">
-              <font-awesome-icon v-if="!nameIsReady(member.name)" :icon="['fas', 'user']" />
-              <span v-else>{{ getNameInitials(member.name) }}</span>
-            </Transition>
-          </div>
+          <UserProfilePictureCircle :name="member.name" />
           <span class="flex-1 bg-gray-100 text-gray-800 text-sm rounded-lg block w-full p-2.5">
             {{ member.name }}
           </span>
@@ -68,14 +45,14 @@ function shareTelegram() {
 
     <!-- Divider -->
     <div v-if="meetingData.members.length > 1" class="border-t border-gray-400 my-12"></div>
-    <div v-else class="mt-8"></div>
 
     <!-- Mock social share card -->
     <div class="flex flex-row gap-4 bg-gray-100 rounded-lg shadow-lg overflow-hidden">
       <img class="w-[40%]" src="/share-preview.jpg" />
       <div class="p-4 flex items-center">
         <span class="italic text-gray-800 text-xl my-auto">
-          {{ meetingData.title && `Join ${meetingData.title} by ${userStore.name}` || `Join a meeting by ${userStore.name}` }}
+          {{ meetingData.title && `Join ${meetingData.title} by ${userStore.name}` || `Join a meeting by
+          ${userStore.name}` }}
         </span>
       </div>
     </div>
@@ -91,14 +68,16 @@ function shareTelegram() {
       </div>
       <div class="flex flex-col gap-2 items-center">
         <button class="bg-green-500 hover:bg-green-600
-        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="shareWhatsapp()">
+        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2"
+          @click="shareWhatsapp()">
           <font-awesome-icon :icon="['fab', 'whatsapp']" />
         </button>
         WhatsApp
       </div>
       <div class="flex flex-col gap-2 items-center">
         <button class="bg-sky-500 hover:bg-sky-600
-        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="shareTelegram()">
+        text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2"
+          @click="shareTelegram()">
           <font-awesome-icon :icon="['fab', 'telegram']" />
         </button>
         Telegram
@@ -107,7 +86,8 @@ function shareTelegram() {
 
 
     <div class="mt-4 float-right">
-      <button type="button" class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-accent-light/50 text-accent-800 hover:bg-accent-light"
+      <button type="button"
+        class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-accent-light/50 text-accent-800 hover:bg-accent-light"
         @click="closeModal()">
         Done
       </button>
