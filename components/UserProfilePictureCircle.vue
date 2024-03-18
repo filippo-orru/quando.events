@@ -4,16 +4,16 @@ let props = defineProps<{
 }>();
 
 function nameIsReady() {
-  return props.name && props.name.length > 1;
+    return props.name && props.name.length > 1;
 }
 
 function getNameInitials() {
-  let split = props.name!.trim().toUpperCase().split(' ');
-  if (split.length > 1) {
-    return split.slice(0, 2).map((name) => name.charAt(0)).join('');
-  } else {
-    return split[0].slice(0, 2);
-  }
+    let split = props.name!.trim().toUpperCase().split(' ');
+    if (split.length > 1) {
+        return split.slice(0, 2).map((name) => name.charAt(0)).join('');
+    } else {
+        return split[0].slice(0, 2);
+    }
 }
 
 </script>
@@ -25,3 +25,16 @@ function getNameInitials() {
         </Transition>
     </div>
 </template>
+
+<style lang="scss">
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.15s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+</style>

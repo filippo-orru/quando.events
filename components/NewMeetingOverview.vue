@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration } from "date-fns";
+import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration, getDay, getDate } from "date-fns";
 import { type CalendarTimeslot } from '~/data/Meeting';
 
 let props = defineProps<{
@@ -23,28 +23,34 @@ let updateTodayTimer: NodeJS.Timeout;
 const scrollViewportRef = ref<HTMLDivElement>();
 const viewportIsReady = useState('viewportIsReady', () => false);
 
+let showDaysRange = 5;
+
 let daysOfTheWeek = [
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ];
 
-let currentWeek = useState('currentWeek', () => getStartOfTheWeek(now.value));
+let currentRangeStart = useState('currentWeek', () => new Date(now.value));
 let weekTransitionDirection = useState('lastWeekChange', () => true); // True for right, false for left. Used for transition
 function toWeek(next: boolean) {
   weekTransitionDirection.value = next;
   setTimeout(() => {
-    currentWeek.value = add(currentWeek.value, { weeks: next ? 1 : -1 });
+    currentRangeStart.value = add(currentRangeStart.value, { days: next ? showDaysRange : -showDaysRange });
   }, 0);
 }
 
-function getDaysOfWeek(monday: Date) {
-  return daysOfTheWeek.map((day, index) => {
-    const date = add(monday, { days: index });
-    return {
+function getDaysOfTimeRange(start: Date) {
+  let startDay = getDay(start) - 1;
+  let days = [];
+  for (let i = 0; i < showDaysRange; i++) {
+    let day = daysOfTheWeek[(startDay + i) % daysOfTheWeek.length];
+    let date = add(start, { days: i });
+    days.push({
       dayOfTheWeek: day,
       date: date,
       isToday: isSameDay(now.value, date)
-    }
-  });
+    });
+  }
+  return days;
 }
 
 function dateToPercentOfDay(date: Date) {
@@ -53,18 +59,24 @@ function dateToPercentOfDay(date: Date) {
   return 100 * dateDayMinutes / oneDayMinutes;
 }
 
-function getTimeslotTop(slot: CalendarTimeslot): number {
-  if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == slot) {
-    return dateToPercentOfDay(getTimeslotWithDrag(slot, draggingTimeslotPosition.value).start);
+function getTimeslotTop(slot: CalendarTimeslot | OverlapSlot): number {
+  let actualSlot = 'original' in slot ? slot.overlap : slot;
+  let originalSlot = 'original' in slot ? slot.original : slot;
+
+  if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == originalSlot) {
+    return dateToPercentOfDay(getTimeslotWithDrag(actualSlot, draggingTimeslotPosition.value).start);
   } else {
-    return dateToPercentOfDay(slot.start);
+    return dateToPercentOfDay(actualSlot.start);
   }
 }
-function getTimeslotHeight(slot: CalendarTimeslot): number {
-  if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == slot) {
-    return getHeight(getTimeslotWithDrag(slot, draggingTimeslotPosition.value));
+function getTimeslotHeight(slot: CalendarTimeslot | OverlapSlot): number {
+  let actualSlot = 'original' in slot ? slot.overlap : slot;
+  let originalSlot = 'original' in slot ? slot.original : slot;
+
+  if (draggingTimeslotPosition.value && draggingTimeslotPosition.value.slot == originalSlot) {
+    return getHeight(getTimeslotWithDrag(actualSlot, draggingTimeslotPosition.value));
   } else {
-    return getHeight(slot);
+    return getHeight(actualSlot);
   }
 }
 
@@ -103,7 +115,7 @@ enum Overlap {
   None, Touch, Cover, Overlap
 }
 function timeslotsOverlap(slot1: CalendarTimeslot, slot2: CalendarTimeslot): Overlap {
-  if (slot1.start <= slot2.start && slot1.end >= slot2.end) {
+  if ((slot1.start <= slot2.start && slot1.end >= slot2.end) || (slot1.start >= slot2.start && slot1.end <= slot2.end)) {
     return Overlap.Cover;
   } else if ((slot1.start < slot2.start && slot1.end > slot2.start) ||
     (slot1.start < slot2.end && slot1.end > slot2.end)) {
@@ -227,29 +239,40 @@ type DragTimeslot = {
 };
 let draggingTimeslotPosition: Ref<DragTimeslot | null> = useState('draggingTimeslotPosition', () => null);
 
-let longPressing = false;
+let longPressing = ref(false);
+let longPressStartTimer: NodeJS.Timeout | null = null;
 
 function dragTimeslotStart(event: TouchEvent | MouseEvent, slot: CalendarTimeslot, which: DragTimeslotWhich, dragY?: number) {
   if (!dragY) return;
 
   draggingTimeslotPosition.value = { slot, which, startY: dragY, currentY: dragY, startTimestamp: Date.now() };
+  longPressStartTimer = setTimeout(() => {
+    longPressing.value = true;
+  }, 300);
+}
+
+function cancelLongPress() {
+  longPressing.value = false;
+  if (longPressStartTimer) {
+    clearTimeout(longPressStartTimer);
+  }
 }
 
 function dragTimeslotMove(event: TouchEvent | MouseEvent, dragY?: number, isTouch: boolean = false) {
-  if (!draggingTimeslotPosition.value || !dragY || !event.cancelable) return;
+  if (!draggingTimeslotPosition.value || !dragY || !event.cancelable) {
+    cancelLongPress();
+    return;
+  }
+
 
   if (isTouch && draggingTimeslotPosition.value.which == 'both') {
-    // Long press only required for touch - moving
-    if (!longPressing) {
-      if (Math.abs(dragY - draggingTimeslotPosition.value.startY) > 40) {
-        draggingTimeslotPosition.value = null; // Cancel drag if moved too much 
-        return;
+    // Long press is required for touch-and-drag gesture
+    if (!longPressing.value) {
+      if (Math.abs(dragY - draggingTimeslotPosition.value.startY) > 40) { // moved too much 
+        cancelLongPress();
       }
-      if (Date.now() - draggingTimeslotPosition.value.startTimestamp > 200) {
-        longPressing = true;
-      } else {
-        return;
-      }
+
+      return;
     }
   }
 
@@ -259,7 +282,7 @@ function dragTimeslotMove(event: TouchEvent | MouseEvent, dragY?: number, isTouc
 }
 
 function dragTimeslotEnd(dragY?: number) {
-  longPressing = false;
+  longPressing.value = false;
 
   if (!draggingTimeslotPosition.value) return;
   let y = dragY || draggingTimeslotPosition.value.currentY;
@@ -315,15 +338,11 @@ function weekSwipeMove(event: TouchEvent) {
   }
 }
 
-function weekSwipeEnd(event: TouchEvent) {
-  swipeStartX = null;
-}
-
 function scrollToNow(smooth: boolean = true) {
   let thisMonday = getStartOfTheWeek(now.value);
-  if (currentWeek.value != thisMonday) {
-    weekTransitionDirection.value = currentWeek.value < thisMonday;
-    currentWeek.value = thisMonday;
+  if (currentRangeStart.value != thisMonday) {
+    weekTransitionDirection.value = currentRangeStart.value < thisMonday;
+    currentRangeStart.value = thisMonday;
   }
 
   let scrollHeight = scrollViewportRef.value!.scrollHeight;
@@ -352,6 +371,70 @@ function getTimeslotsByDay(slots: CalendarTimeslot[]) {
   return selectedTimesByDay;
 }
 
+type OverlapSlot = {
+  original: CalendarTimeslot,
+  overlap: CalendarTimeslot,
+}
+
+function getFullOverlapTimeslots(slots: CalendarTimeslot[]): OverlapSlot[] {
+  let allCroppedSlots = [] as OverlapSlot[];
+  for (let slot of slots) {
+    let croppedSlots = [{ overlap: slot, original: slot }] as OverlapSlot[];
+
+    for (let member of meetingData.value.members) {
+      if (member.id == userInfo.id) continue;
+
+      let croppedSlotsForMember: OverlapSlot[] = [];
+      for (let croppedSlot of croppedSlots) {
+        let s1 = croppedSlot.overlap;
+        for (let otherSlot of member.times) {
+          let s2 = otherSlot;
+
+          if ((s1.start <= s2.start && s1.end >= s2.end) || (s1.start >= s2.start && s1.end <= s2.end)) {
+            croppedSlotsForMember.push(
+              {
+                overlap: {
+                  start: s1.start > s2.start ? s1.start : s2.start,
+                  end: s1.end < s2.end ? s1.end : s2.end,
+                } as CalendarTimeslot,
+                original: slot
+              },
+            );
+          } else if ((s1.start < s2.start && s1.end > s2.start) ||
+            (s1.start < s2.end && s1.end > s2.end)) {
+            croppedSlotsForMember.push(
+              {
+                overlap: {
+                  start: s1.start > s2.start ? s1.start : s2.start,
+                  end: s1.end < s2.end ? s1.end : s2.end,
+                } as CalendarTimeslot,
+                original: slot
+              }
+            );
+          }
+        }
+      }
+
+      croppedSlots = croppedSlotsForMember;
+    }
+
+    allCroppedSlots = allCroppedSlots.concat(croppedSlots);
+  }
+  return allCroppedSlots;
+};
+
+function hideTextInTimeslot(slot: CalendarTimeslot): boolean {
+  let isFullOverlap = meetingData.value.members.every((member) =>{
+    if (member.id == userInfo.id) return true;
+    return member.times.some((slot2) => slot2.start <= slot.start && slot2.end > slot.start);
+  });
+  if (getDay(slot.start) == 3) {
+    // debugger
+  }
+
+  return isFullOverlap;
+}
+
 onBeforeMount(() => {
   updateTodayTimer = setInterval(updateToday, 1000);
   nextBrandTimer = setInterval(nextBrand, 5000);
@@ -361,6 +444,9 @@ onBeforeMount(() => {
 onMounted(() => {
   minMoveDelta = Math.min(130, window.innerHeight * 0.15);
   locale = navigator.languages[0] || 'en-US';
+
+  // Show more days on larger screens
+  showDaysRange = window.innerWidth < 640 ? 5 : 7;
 
   nextTick(() => {
     scrollToNow(false);
@@ -415,11 +501,11 @@ onUnmounted(() => {
 
               <div class="mx-4 flex items-center justify-center text-xl">
                 <Transition name="fade" mode="out-in">
-                  <p :key="currentWeek.toLocaleString(locale, { month: 'long', year: 'numeric' })">
-                    <span>{{ currentWeek.toLocaleString(locale, { month: 'long' })
+                  <p :key="currentRangeStart.toLocaleString(locale, { month: 'long', year: 'numeric' })">
+                    <span>{{ currentRangeStart.toLocaleString(locale, { month: 'long' })
                       }}&nbsp;
                     </span>
-                    <span class="hidden md:inline-block">{{ currentWeek.toLocaleString(locale, {
+                    <span class="hidden md:inline-block">{{ currentRangeStart.toLocaleString(locale, {
                   year: 'numeric'
                 })
                       }}
@@ -437,18 +523,19 @@ onUnmounted(() => {
                 <font-awesome-icon :key="currentBrand" :icon="'fa-brands fa-' + brands[currentBrand]"
                   class="w-4 mr-2" />
               </Transition>
-              Import Calendar
+              <span>Import</span>
+              <span class="hidden md:block">&nbsp;Calendar</span>
             </button>
           </div>
           <!-- <div class="relative"> -->
           <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
-            <div :key="currentWeek.getTime()"
+            <div :key="currentRangeStart.getTime()"
               class="w-full container mx-auto flex justify-stretch items-center px-4 text-gray-500">
               <div class="w-12 flex-shrink-0">
                 <!-- Time indicators placeholder -->
               </div>
               <div class="inline-flex flex-col justify-center items-center flex-1 gap-1 text-center text-xs"
-                v-for="day in getDaysOfWeek(currentWeek)" :key="day.date.getTime()">
+                v-for="day in getDaysOfTimeRange(currentRangeStart)" :key="day.date.getTime()">
                 <div>
                   <span class="md:hidden">{{ day.dayOfTheWeek.substring(0, 1).toUpperCase()
                     }}</span>
@@ -467,7 +554,7 @@ onUnmounted(() => {
           <!-- Scrollable -->
           <div class="mb-48 md:mb-0">
             <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
-              <div :key="currentWeek.getTime()"
+              <div :key="currentRangeStart.getTime()"
                 class="container mx-auto w-full flex h-[1300px] py-4 px-2 md:px-4 relative opacity-0 transition-all overflow-hidden"
                 :class="{ 'opacity-100': viewportIsReady }" @touchstart="weekSwipeStart" @touchmove="weekSwipeMove">
                 <!-- Days viewport (tall) -->
@@ -482,7 +569,7 @@ onUnmounted(() => {
                   </div>
                 </div>
                 <span class="w-12 flex-shrink-0"></span>
-                <div v-for="(day, index) in   getDaysOfWeek(currentWeek)  "
+                <div v-for="(day, index) in   getDaysOfTimeRange(currentRangeStart)  "
                   class="flex-1 h-full relative border-r border-gray-200" :class="{ 'border-l': index == 0 }"
                   :key="day.date.toString()" @mousemove="(event) => dragTimeslotMove(event, event.screenY)"
                   @mouseup="(event) => dragTimeslotEnd(event.screenY)"
@@ -520,7 +607,7 @@ onUnmounted(() => {
 
                     <!-- Other members' time slots -->
                     <div v-for="member in  meetingData.members " class="w-full h-full absolute pointer-events-none">
-                      <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="bg-secondary-800 bg-gradient-to-br from-secondary to-secondary-300 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
+                      <div v-for="slot in  member.times.filter((slot) => isSameDay(slot.start, day.date))  " class="opacity-60 bg-secondary-800 bg-gradient-to-br from-secondary to-secondary-300 absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-white rounded-md text-xs break-all
                     py-2 px-1 md:px-2 md:py-2 overflow-hidden" :style="{
                   top: getTimeslotTop(slot) + '%', height: 'calc('
                     + getTimeslotHeight(slot) * 100 + '% - 1px)',
@@ -543,15 +630,48 @@ onUnmounted(() => {
                       </div>
                     </div>
 
-                    <!-- Time slots -->
+                    <!-- Time slots: content -->
                     <div v-for="slot in  meetingData.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
                       :key="slot.start.toString()"
-                      class="bg-accent absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-accent-800 rounded-md text-xs break-all group"
+                      class="bg-gradient-to-bl from-accent-light to-accent-300  bg-accent absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-accent-800 rounded-md text-xs break-all group transition-colors transition-shadow"
+                      :class="{ 'bg-accent-light shadow-lg': draggingTimeslotPosition?.slot === slot && (draggingTimeslotPosition.which === 'both' ? longPressing : true) }"
                       :style="{
                   '-webkit-touch-callout': 'none', top: getTimeslotTop(slot) + '%', height: 'calc('
                     + getTimeslotHeight(slot) * 100 + '% - 1px)',
-                }" :class="{ 'bg-gradient-to-bl from-accent-light to-accent-300': draggingTimeslotPosition?.slot !== slot || draggingTimeslotPosition?.which !== 'both' }">
-                      <!-- Time slot -->
+                }">
+                      <!-- Time slot content -->
+                      <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden">
+                        <span class="transition-all"
+                          :class="{ 'opacity-0': hideTextInTimeslot(slot) || isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
+                          You</span>
+                      </div>
+                    </div>
+
+                    <!-- Time slot overlaps -->
+                    <div
+                      v-for="slot in getFullOverlapTimeslots(meetingData.selectedTimes.filter((slot) => isSameDay(slot.start, day.date))) "
+                      :key="slot.original.start.toString()"
+                      class="pointer-events-none absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-accent-800 rounded-md text-xs break-all group"
+                      :style="{
+                  top: getTimeslotTop(slot) + '%', height: 'calc('
+                    + getTimeslotHeight(slot) * 100 + '% - 1px)',
+                }" :class="{ 'overlap-striped': !(draggingTimeslotPosition?.slot === slot.original && (draggingTimeslotPosition.which === 'both' ? longPressing : true)) }">
+                      <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden">
+                        <span class="transition-all"
+                          :class="{ 'opacity-0': isShort(slot.overlap) || (draggingTimeslotPosition?.slot === slot.original && (draggingTimeslotPosition.which === 'both' ? longPressing : true)) }">
+                          Everyone</span>
+                      </div>
+                    </div>
+
+                    <!-- Time slots: drag handles -->
+                    <div v-for="slot in  meetingData.selectedTimes.filter((slot) => isSameDay(slot.start, day.date)) "
+                      :key="slot.start.toString()"
+                      class="absolute left-0 right-1 md:right-2 inline-flex flex-col justify-start text-xs group"
+                      :style="{
+                  '-webkit-touch-callout': 'none', top: getTimeslotTop(slot) + '%', height: 'calc('
+                    + getTimeslotHeight(slot) * 100 + '% - 1px)',
+                }">
+                      <!-- Time slot: Center drag area -->
                       <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden">
                         <div class="absolute left-0 right-0 top-3 bottom-3"
                           @touchstart="(event) => dragTimeslotStart(event, slot, 'both', event.touches[0] && event.touches[0].screenY)"
@@ -559,10 +679,6 @@ onUnmounted(() => {
                           @mousedown="(event) => dragTimeslotStart(event, slot, 'both', event.screenY)">
                           <!-- Center drag area for touch -->
                         </div>
-
-                        <span class="transition-all"
-                          :class="{ 'opacity-0': isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
-                          {{ formatTimeslotDuration(slot) }}</span>
                       </div>
                       <!-- Drag handles -->
                       <div class="absolute bg-white/90 outline outline-4 cursor-pointer md:outline-2 outline-accent-dark rounded-full p-1 top-0 left-1 md:right-1 -translate-y-1/2
@@ -588,7 +704,8 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Now indicator -->
-                    <div v-if="day.isToday" class="absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
+                    <div v-if="day.isToday"
+                      class="pointer-events-none absolute w-full h-[2px] bg-gray-500 -translate-y-1/2"
                       :style="{ top: dateToPercentOfDay(now) + '%' }">
                       <!-- Dot -->
                       <div class="absolute w-3 h-3 bg-gray-500 rounded-full top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -686,6 +803,10 @@ onUnmounted(() => {
 </template>
 
 <style>
+.overlap-striped {
+  background-image: repeating-linear-gradient(-215deg, transparent, transparent 10px, rgba(0, 0, 0, 0.1) 10px, rgba(0, 0, 0, 0.1) 20px);
+}
+
 /* Transitions */
 
 .fade-enter-active,
