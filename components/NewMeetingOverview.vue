@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration, getDay, getDate } from "date-fns";
+import { add, isSameDay, previousMonday, isMonday, addSeconds, addMinutes, addHours, formatDuration, intervalToDuration, getDay, getDate, set } from "date-fns";
 import { type CalendarTimeslot } from '~/data/Meeting';
 
 useHead({
@@ -52,16 +52,24 @@ function toWeek(next: boolean) {
   }, 0);
 }
 
-function getDaysOfTimeRange(start: Date) {
+type DayOfTheWeek = {
+  dayOfTheWeek: string,
+  date: Date,
+  isToday: boolean,
+  showAddTimeslotHint?: number
+};
+
+function getDaysOfTimeRange(start: Date): DayOfTheWeek[] {
   let startDay = getDay(start) - 1;
-  let days = [];
+  let days = [] as DayOfTheWeek[];
   for (let i = 0; i < showDaysRange; i++) {
     let day = daysOfTheWeek[(startDay + i) % daysOfTheWeek.length];
     let date = add(start, { days: i });
     days.push({
       dayOfTheWeek: day,
       date: date,
-      isToday: isSameDay(now.value, date)
+      isToday: isSameDay(now.value, date),
+      showAddTimeslotHint: isSameDay(add(now.value, { days: 1 }), date) ? set(now.value, { minutes: 0, seconds: 0, milliseconds: 0 }).getHours() : undefined,
     });
   }
   return days;
@@ -507,13 +515,12 @@ function getFullOverlapTimeslots(slots: CalendarTimeslot[]): OverlapSlot[] {
 };
 
 function hideTextInTimeslot(slot: CalendarTimeslot): boolean {
+  if (meetingData.value.members.length === 0) return false;
+
   let isFullOverlap = meetingData.value.members.every((member) => {
     if (member.id == userInfo.id) return true;
     return member.times.some((slot2) => slot2.start <= slot.start && slot2.end > slot.start);
   });
-  if (getDay(slot.start) == 3) {
-    // debugger
-  }
 
   return isFullOverlap;
 }
@@ -708,10 +715,22 @@ onUnmounted(() => {
                     <div class="absolute w-full h-full flex flex-col" :class="{ 'hidden': draggingTimeslotPosition }">
                       <div class="flex-1 m-1 md:m-2" v-for="hour in 24">
                         <!-- add time slot -->
-                        <button v-if="showAddTimeslotButtonFor(day.date, hour - 1)" class="w-full h-full bg-accent-light rounded-md flex items-center justify-center
-                                    opacity-[1%] active:opacity-100 md:hover:opacity-100 transition-opacity"
+                        <button v-if="showAddTimeslotButtonFor(day.date, hour - 1)"
+                          class="w-full h-full rounded-md flex items-center justify-center relative
+                                    active:opacity-100 md:hover:bg-accent-light md:hover:opacity-100 transition-opacity"
+                          :class="day.showAddTimeslotHint === (hour - 1) && meetingData.selectedTimes.length === 0 ? 'bg-accent-light/70' : 'bg-accent-light opacity-[1%]'"
                           @click="addTimeslotViaTap(day.date, hour - 1)">
                           <font-awesome-icon icon="plus" class="text-accent-800" />
+                          <div v-if="day.showAddTimeslotHint === (hour - 1) && meetingData.selectedTimes.length === 0"
+                            class="pointer-events-none absolute translate-y-2/3 translate-x-2/3 z-10">
+                            <div class="rounded-2xl bg-gray-100 py-2 px-4 w-36 shadow-lg pointer-hint-anim">
+                              <div class="absolute -left-2 -top-2 text-3xl -rotate-12">
+                                <font-awesome-icon :icon="['fas', 'hand-pointer']" class="absolute text-white" />
+                                <font-awesome-icon :icon="['far', 'hand-pointer']" class="absolute text-slate" />
+                              </div>
+                              Tap to select when you're available
+                            </div>
+                          </div>
                         </button>
                       </div>
                     </div>
@@ -730,7 +749,7 @@ onUnmounted(() => {
                       <!-- Time slot content -->
                       <div class="relative h-full py-2 px-1 md:px-2 md:py-2 overflow-hidden">
                         <span class="transition-all"
-                          :class="{ 'opacity-0': hideTextInTimeslot(slot) || isShort(slot) || draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both' }">
+                          :class="{ 'opacity-0': hideTextInTimeslot(slot) || isShort(slot) || (draggingTimeslotPosition?.slot === slot && draggingTimeslotPosition?.which !== 'both') }">
                           You</span>
                       </div>
                     </div>
@@ -939,7 +958,7 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-@keyframes highlight {
+@keyframes highlight-anim {
   0% {
     outline: 4px solid #e7525e;
   }
@@ -950,6 +969,24 @@ onUnmounted(() => {
 }
 
 .highlighted {
-  animation: highlight 1.0s ease-out forwards;
+  animation: highlight-anim 1.0s ease-out forwards;
+}
+
+.pointer-hint-anim {
+  animation: pointer-hint 1.5s ease-in-out infinite;
+}
+
+@keyframes pointer-hint {
+  0% {
+    transform: translate(0px, 5px) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+  }
+
+  50% {
+    transform: translate(5px, 15px) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+  }
+
+  100% {
+    transform: translate(0px, 5px) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+  }
 }
 </style>

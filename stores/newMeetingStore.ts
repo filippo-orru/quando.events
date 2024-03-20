@@ -34,7 +34,6 @@ interface CalendarTimeslotWithId extends CalendarTimeslot {
     id: string;
 }
 
-
 interface NewMeetingStore {
     meetingId: string;
     data: MeetingData | null | 'error';
