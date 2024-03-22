@@ -28,25 +28,23 @@ googleCalendar.init();
         </div>
 
         <div class="flex flex-col gap-4">
-            <button v-if="!googleCalendar.isConnected" type="button" class="flex items-center justify-center rounded-md border border-transparent 
+            <button v-if="!googleCalendar.isConnected" type="button" class="flex items-center justify-center gap-3 rounded-md border border-transparent 
             bg-secondary-100/60 text-secondary-800 px-4 py-2 text-sm font-medium focus-visible:ring-secondary-800
                                     "
                 :class="googleCalendar.isReady ? 'hover:bg-secondary-100' : 'cursor-not-allowed opacity-50'"
                 @click="googleCalendar.isReady ? googleCalendar.importEvents() : undefined">
-                <font-awesome-icon :icon="googleCalendar.isReady ? ['fab', 'google'] : 'spinner'" class="mr-3" />
+                <font-awesome-icon :icon="googleCalendar.isReady ? ['fab', 'google'] : 'spinner'" />
                 Google Calendar
             </button>
             <div v-else
-                class="flex items-center justify-between rounded-md border border-transparent bg-secondary-100/60 text-secondary px-4 py-2 text-sm font-medium focus-visible:ring-secondary-800">
-                <button class="invisible text-secondary-800">
-                    <!-- For spacing -->
-                    <font-awesome-icon :icon="['fas', 'times']" />
-                </button>
-                <div class="px-2">
-                    <font-awesome-icon :icon="['fab', 'google']" class="mr-3" />
+                class="flex items-center justify-start rounded-md border border-transparent bg-secondary-100/60 text-secondary px-4 py-2 text-sm font-medium focus-visible:ring-secondary-800">
+                <div class="px-2 flex items-center justify-center gap-3">
+                    <font-awesome-icon :icon="['fab', 'google']" />
                     Connected to Google Calendar
                 </div>
-                <button class="text-secondary-800 rounded-full hover:bg-secondary/50 flex items-center justify-center h-8 w-8" @click="googleCalendar.remove()">
+                <button
+                    class="text-secondary-800 rounded-full hover:bg-secondary/50 flex items-center justify-center h-8 w-8"
+                    @click="googleCalendar.remove()">
                     <font-awesome-icon :icon="['fas', 'times']" />
                 </button>
             </div>

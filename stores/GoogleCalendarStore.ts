@@ -71,6 +71,8 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
 
     remove() {
       this.token = null;
+      googleTokenClient = null;
+      gapi.client.setToken(null);
       useImportedCalendarEventsStore().clear('google');
     }
   },
