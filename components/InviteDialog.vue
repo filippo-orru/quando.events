@@ -72,7 +72,7 @@ function shareMail() {
 
     <!-- share buttons row -->
     <div class="flex mt-6 gap-4 justify-evenly">
-      <div class="flex flex-col gap-2 items-center">
+      <div class="flex-1 flex flex-col gap-2 items-center">
         <button class="bg-accent hover:bg-accent-dark
         text-lg shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2" @click="copyLink()">
           <Transition name="fade" mode="out-in">
@@ -82,7 +82,7 @@ function shareMail() {
         </button>
         Copy link
       </div>
-      <div class="flex flex-col gap-2 items-center">
+      <div class="flex-1 flex flex-col gap-2 items-center">
         <button class="bg-green-500 hover:bg-green-600
         text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2"
           @click="shareWhatsapp()">
@@ -90,7 +90,7 @@ function shareMail() {
         </button>
         WhatsApp
       </div>
-      <div class="flex flex-col gap-2 items-center">
+      <div class="flex-1 flex flex-col gap-2 items-center">
         <button class="bg-sky-500 hover:bg-sky-600
         text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2"
           @click="shareTelegram()">
@@ -98,7 +98,7 @@ function shareMail() {
         </button>
         Telegram
       </div>
-      <div class="flex flex-col gap-2 items-center">
+      <div class="flex-1 flex flex-col gap-2 items-center">
         <button class="bg-blue-600 hover:bg-blue-700
         text-xl shadow-md rounded-full h-12 w-12 flex items-center justify-center text-white p-2"
           @click="shareMail()">

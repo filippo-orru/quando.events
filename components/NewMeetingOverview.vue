@@ -790,7 +790,7 @@ onUnmounted(() => {
                       </div>
                       <!-- Drag handles -->
                       <div class="absolute bg-white border-4 border-accent cursor-pointer md:border-2 rounded-full p-1.5 top-0 left-1 right-1 -translate-y-1/2
-                                     transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                                     md:group-hover:shadow-lg transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         @mousedown="(event) => dragTimeslotStart(event, slot, 'start', event.screenY)"
                         @touchstart="(event) => dragTimeslotStart(event, slot, 'start', event.touches[0] && event.touches[0].screenY)">
                         <!-- Hover indicator -->
@@ -800,7 +800,7 @@ onUnmounted(() => {
                         </div>
                       </div>
                       <div class="absolute bg-white border-4 border-accent cursor-pointer md:border-2 rounded-full p-1.5 bottom-0 right-1 left-1 translate-y-1/2
-                                     transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                                    md:group-hover:shadow-lg transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         @mousedown="(event) => dragTimeslotStart(event, slot, 'end', event.screenY)"
                         @touchstart="(event) => dragTimeslotStart(event, slot, 'end', event.touches[0] && event.touches[0].screenY)">
                         <!-- Hover indicator -->

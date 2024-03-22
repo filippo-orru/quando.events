@@ -24,7 +24,8 @@ onUnmounted(() => {
       <nav class="container max-w-screen-lg mx-auto flex px-12 items-center gap-8 tracking-wide">
         <NuxtLink to="/" class="decoration-2 hover:underline">quando.events</NuxtLink>
         <div class="ml-auto flex gap-8">
-          <NuxtLink :external="true" to="/meeting/new" class="hidden md:block ml-auto decoration-2 hover:underline">new meeting
+          <NuxtLink :external="true" to="/meeting/new" class="hidden md:block ml-auto decoration-2 hover:underline">new
+            meeting
           </NuxtLink>
           <!-- <NuxtLink to="/sign-in" class="decoration-2 hover:underline">sign in</NuxtLink> -->
         </div>
@@ -120,7 +121,7 @@ onUnmounted(() => {
               </li>
             </ol>
           </div>
-          
+
           <div>
             <img src="/screenshot.png" class="mt-6 w-96 border-2 shadow-xl rounded-lg mx-auto lg:mx-0" />
           </div>
@@ -164,6 +165,12 @@ onUnmounted(() => {
                   class="text-accent-800 font-bold">hello@quando.events</a>
               </p>
             </div>
+          </div>
+          <div class="flex justify-center mt-8">
+            <NuxtLink :external="true" class="bg-gray-800 text-white px-4 py-4 rounded-full hover:bg-gray-700
+            hover:ring-2 hover:ring-white transition-colors hover:shadow-xl" href="/meeting/new">
+              <font-awesome-icon icon="arrow-right" class="mr-2" /> Plan a meeting
+            </NuxtLink>
           </div>
         </section>
       </div>
