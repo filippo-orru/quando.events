@@ -606,7 +606,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Import button -->
-            <button
+            <!-- <button
               class="ml-auto flex items-center justify-center px-3 py-1 rounded-md border hover:bg-gray-100 transition-colors"
               @click="showImportEventsDialog = true">
               <Transition mode="out-in" name="fade">
@@ -615,7 +615,7 @@ onUnmounted(() => {
               </Transition>
               <span>Import</span>
               <span class="hidden md:block">&nbsp;Calendar</span>
-            </button>
+            </button> -->
           </div>
           <!-- <div class="relative"> -->
           <Transition :name="weekTransitionDirection ? 'change-week-r' : 'change-week-l'" mode="out-in">
