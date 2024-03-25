@@ -67,6 +67,7 @@ export interface CalendarTimeslotSerialized {
 export interface CalendarEntry extends CalendarTimeslot {
     id: String;
     title: string;
+    fullDay: boolean;
 };
 
 export type CalendarImportSource = 'google';

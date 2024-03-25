@@ -1,10 +1,20 @@
 import { useScriptTag } from '@vueuse/core';
+import { add } from 'date-fns';
 import { defineStore } from 'pinia'
-import type { CalendarEntry, ImportedCalendarEntry } from '~/data/Meeting';
+import type { ImportedCalendarEntry } from '~/data/Meeting';
+
+type GoogleCalendar = {
+  id: string;
+  summary: string;
+  selected: boolean;
+}
 
 type GoogleCalendarStore = {
   token: google.accounts.oauth2.TokenResponse | null;
   isReady: boolean;
+  lastUpdated: Date | null;
+  importState: 'idle' | 'loadingCalendars' | 'loadedCalendars' | 'loadingEvents' | 'done';
+  calendars: GoogleCalendar[];
 }
 let googleTokenClient: google.accounts.oauth2.TokenClient | null = null;
 
@@ -13,6 +23,9 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
     return {
       token: null,
       isReady: false,
+      lastUpdated: null,
+      importState: 'idle',
+      calendars: [],
     } as GoogleCalendarStore;
   },
   actions: {
@@ -43,7 +56,7 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
               throw new Error(response.error);
             }
             this.token = response;
-            importGoogleCalendarEvents();
+            importGoogleCalendars(this);
           },
         }));
         this.isReady = true;
@@ -51,13 +64,13 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
     },
 
 
-    importEvents() {
+    startImport() {
       if (!this.isReady) {
         console.error('Google Sign-In not ready');
         return;
       }
 
-      let client = this.tokenClient!;
+      let client = googleTokenClient!;
       if (this.token) {
         gapi.client.setToken(this.token);
       }
@@ -65,13 +78,30 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
       if (gapi.client.getToken() === null) {
         client.requestAccessToken({ prompt: 'consent' });
       } else {
-        importGoogleCalendarEvents();
+        importGoogleCalendars(this);
       }
     },
 
+    importEvents() {
+      if (!this.isReady) {
+        console.error('Google Sign-In not ready');
+        return;
+      }
+
+      if (this.calendars.length === 0) {
+        console.error('No calendars selected');
+        return;
+      }
+
+      importGoogleCalendarEvents(this);
+      this.lastUpdated = new Date();
+      this.importState = 'done';
+    },
+
     remove() {
+      this.importState = 'idle'
+      this.calendars = [];
       this.token = null;
-      googleTokenClient = null;
       gapi.client.setToken(null);
       useImportedCalendarEventsStore().clear('google');
     }
@@ -83,10 +113,9 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
         clientId: config.public.googleInfo.clientId,
         apiKey: config.public.googleInfo.apiKey,
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
-        scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+        scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.readonly',
       }
     },
-    tokenClient: () => googleTokenClient,
     isConnected: (store) => {
       console.log("connected?", store.token)
       return store.token !== null;
@@ -98,6 +127,9 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
         let v = value as GoogleCalendarStore
         return JSON.stringify({
           token: v.token,
+          lastUpdated: v.lastUpdated?.getTime(),
+          importState: v.importState,
+          calendars: v.calendars,
         });
       },
       deserialize: (value: string) => {
@@ -106,6 +138,9 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
           token: parsed.token,
           tokenClient: null,
           isReady: false,
+          lastUpdated: parsed.lastUpdated ? new Date(parsed.lastUpdated) : null,
+          importState: parsed.importState,
+          calendars: parsed.calendars,
         } as GoogleCalendarStore;
       }
     }
@@ -113,21 +148,36 @@ export const useGoogleCalendarStore = defineStore('googleToken', {
 });
 
 
-async function importGoogleCalendarEvents() {
-  let importedEventsStore = useImportedCalendarEventsStore();
-
-  const request = {
-    'calendarId': 'primary',
-    'timeMin': (new Date()).toISOString(),
-    'showDeleted': false,
-    'singleEvents': true,
-    'maxResults': 10,
-    'orderBy': 'startTime',
-  };
+async function importGoogleCalendars(googleStore: GoogleCalendarStore) {
   let response = await gapi.client.request({
-    'path': 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
-    'params': request,
+    'path': 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
   });
+
+  type GoogleCalendarResponse = {
+    id: string;
+    summary: string;
+  }
+
+  const calendars = response.result.items as GoogleCalendarResponse[] | undefined;
+  if (!calendars || calendars.length == 0) {
+    console.log('No calendars found.');
+    // TODO error handling
+    return;
+  }
+  console.log('Calendars:', calendars);
+
+  googleStore.calendars = calendars.map((calendar) => {
+    return {
+      id: calendar.id,
+      summary: calendar.summary,
+      selected: !calendar.id.endsWith('.calendar.google.com'),
+    } as GoogleCalendar;
+  });
+  googleStore.importState = 'loadedCalendars';
+}
+
+async function importGoogleCalendarEvents(googleStore: GoogleCalendarStore) {
+  let importedEventsStore = useImportedCalendarEventsStore();
 
   type GoogleEvent = {
     id: string;
@@ -135,23 +185,48 @@ async function importGoogleCalendarEvents() {
     start: { dateTime: string; date: string; };
     end: { dateTime: string; date: string; };
   }
-  const events = response.result.items as GoogleEvent[] | undefined;
-  if (!events || events.length == 0) {
-    console.log('No events found.');
-    return;
-  }
-  console.log('Events:', events);
 
-  let calendarEntries = events.map((event) => {
-    let start = new Date(event.start.dateTime || event.start.date);
-    let end = new Date(event.end.dateTime || event.end.date);
-    return {
-      id: event.id,
-      title: event.summary,
-      start: start,
-      end: end,
-      source: 'google',
-    } as ImportedCalendarEntry;
-  });
-  importedEventsStore.addEvents(calendarEntries);
+  let googleEvents = [] as GoogleEvent[];
+  let selectedCalendars = googleStore.calendars.filter((calendar) => calendar.selected);
+
+  for (let calendar of selectedCalendars) {
+    const request = {
+      'calendarId': calendar.id,
+      'timeMin': (add(new Date(), { days: -2 })).toISOString(),
+      'showDeleted': false,
+      'singleEvents': true,
+      'maxResults': 50,
+      'orderBy': 'startTime',
+    };
+    let response = await gapi.client.request({
+      'path': 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendar.id) + '/events',
+      'params': request,
+    });
+
+    const events = response.result.items as GoogleEvent[] | undefined;
+    if (!events || events.length == 0) {
+      console.log('No events found.');
+      continue
+    }
+    console.log('Events:', events);
+    googleEvents.push(...events);
+  }
+
+  importedEventsStore.clear('google');
+
+  importedEventsStore.addEvents(
+    googleEvents.map((event) => {
+      let fullDay = !event.start.dateTime;
+      let start = new Date(event.start.dateTime || (event.start.date + " 0:00")); // Set time to 0:00
+      let end = new Date(event.end.dateTime || (event.end.date + " 0:00")); // Set time to 0:00
+      return {
+        id: event.id,
+        title: event.summary,
+        start: start,
+        end: end,
+        fullDay: fullDay,
+        source: 'google',
+      } as ImportedCalendarEntry;
+    })
+  );
 }

@@ -9,8 +9,8 @@
                 <a href="https://filippo-orru.com" class="underline">Filippo Orru</a>
             </span>
             <nav class="flex-0 flex gap-8 [&_a:hover]:underline">
-                <a href="#" class="">Privacy</a>
-                <a href="#" class="">Terms</a>
+                <a href="/privacy" class="">Privacy</a>
+                <a href="/tos" class="">Terms</a>
             </nav>
         </div>
     </footer>
