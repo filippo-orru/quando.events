@@ -51,11 +51,6 @@ services:
       - traefik
       - default
 
-networks:
-  traefik:
-    external: true
-    name: traefik_proxy
-
 volumes:
   db-data:
     driver: local
