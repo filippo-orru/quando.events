@@ -9,12 +9,12 @@ services:
 
       traefik.http.routers.quando-plausible.entrypoints: "https"
       traefik.http.routers.quando-plausible.rule: "Host(`stats.quando.events`)"
-      traefik.http.routers.quando-plausible.service: plausible
+      traefik.http.routers.quando-plausible.service: quando-plausible
 
       # Proxy traffic from /psb.js to "http://plausible:8000/js/plausible.js"
       traefik.http.routers.quando-plausibleJs.entrypoints: "https"
       traefik.http.routers.quando-plausibleJs.rule: "Host(`stats.quando.events`) && Path(`/psb.js`)"
-      traefik.http.routers.quando-plausibleJs.service: plausible
+      traefik.http.routers.quando-plausibleJs.service: quando-plausible
       traefik.http.middlewares.plausibleJsReplacement.replacepath.path: "/js/plausible.js"
       traefik.http.routers.quando-plausibleJs.middlewares: plausibleJsReplacement
 
