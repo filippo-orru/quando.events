@@ -47,6 +47,14 @@ services:
       - 8000
     env_file:
       - plausible-conf.env
+    networks:
+      - traefik
+      - default
+
+networks:
+  traefik:
+    external: true
+    name: traefik_proxy
 
 volumes:
   db-data:
