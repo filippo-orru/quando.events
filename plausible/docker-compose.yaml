@@ -5,18 +5,18 @@ services:
     image: plausible/analytics:v2
     labels:
       traefik.enable: "true"
-      traefik.http.services.plausible.loadbalancer.server.port: 8000
+      traefik.http.services.quando-plausible.loadbalancer.server.port: 8000
 
-      traefik.http.routers.plausible.entrypoints: "https"
-      traefik.http.routers.plausible.rule: "Host(`stats.quando.events`)"
-      traefik.http.routers.plausible.service: plausible
+      traefik.http.routers.quando-plausible.entrypoints: "https"
+      traefik.http.routers.quando-plausible.rule: "Host(`stats.quando.events`)"
+      traefik.http.routers.quando-plausible.service: plausible
 
       # Proxy traffic from /psb.js to "http://plausible:8000/js/plausible.js"
-      traefik.http.routers.plausibleJs.entrypoints: "https"
-      traefik.http.routers.plausibleJs.rule: "Host(`stats.quando.events`) && Path(`/psb.js`)"
-      traefik.http.routers.plausibleJs.service: plausible
+      traefik.http.routers.quando-plausibleJs.entrypoints: "https"
+      traefik.http.routers.quando-plausibleJs.rule: "Host(`stats.quando.events`) && Path(`/psb.js`)"
+      traefik.http.routers.quando-plausibleJs.service: plausible
       traefik.http.middlewares.plausibleJsReplacement.replacepath.path: "/js/plausible.js"
-      traefik.http.routers.plausibleJs.middlewares: plausibleJsReplacement
+      traefik.http.routers.quando-plausibleJs.middlewares: plausibleJsReplacement
 
     command: sh -c "sleep 2 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
     expose:
