@@ -13,6 +13,10 @@ export default defineNuxtConfig({
         class: '[&_:focus]:outline-none [&_:focus-visible]:ring-2 [&_:focus-visible]:ring-accent [&_:focus-visible]:ring-offset',
 
       },
+      script: [
+        // Plausible Analytics
+        { defer: true, 'data-domain': 'quando.events', src: 'https://stats.quando.events/psb.js' },
+      ],
     },
   },
   css: [
