@@ -1,34 +1,8 @@
-version: '3'
-
+version: "3.3"
 services:
-  plausible:
-    image: plausible/analytics:v2
-    labels:
-      traefik.enable: "true"
-      traefik.http.services.quando-plausible.loadbalancer.server.port: 8000
-
-      traefik.http.routers.quando-plausible.entrypoints: "https"
-      traefik.http.routers.quando-plausible.rule: "Host(`stats.quando.events`)"
-      traefik.http.routers.quando-plausible.service: quando-plausible
-
-      # Proxy traffic from /psb.js to "http://plausible:8000/js/plausible.js"
-      traefik.http.routers.quando-plausibleJs.entrypoints: "https"
-      traefik.http.routers.quando-plausibleJs.rule: "Host(`stats.quando.events`) && Path(`/psb.js`)"
-      traefik.http.routers.quando-plausibleJs.service: quando-plausible
-      traefik.http.middlewares.quando-plausibleJsReplacement.replacepath.path: "/js/plausible.js"
-      traefik.http.routers.quando-plausibleJs.middlewares: quando-plausibleJsReplacement
-
-    command: sh -c "sleep 2 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
-    expose:
-      - 8000
-    depends_on:
-      - plausible_db
-      - plausible_events_db
-    env_file:
-      - plausible-conf.env
-  
   plausible_db:
-    # supported versions are 12, 13, and 14
+    # Plausible v2.0.0 was tested against PostgreSQL versions 12, 13, and 14
+    # https://github.com/plausible/analytics/blob/v2.0.0/.github/workflows/elixir.yml#L16
     image: postgres:14-alpine
     restart: always
     volumes:
@@ -47,6 +21,32 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+
+  plausible:
+    image: plausible/analytics:v2.0
+    restart: always
+    command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    labels:
+      traefik.enable: "true"
+      traefik.http.services.quando-plausible.loadbalancer.server.port: 8000
+
+      traefik.http.routers.quando-plausible.entrypoints: "https"
+      traefik.http.routers.quando-plausible.rule: "Host(`stats.quando.events`)"
+      traefik.http.routers.quando-plausible.service: quando-plausible
+
+      # Proxy traffic from /psb.js to "http://plausible:8000/js/plausible.js"
+      traefik.http.routers.quando-plausibleJs.entrypoints: "https"
+      traefik.http.routers.quando-plausibleJs.rule: "Host(`stats.quando.events`) && Path(`/psb.js`)"
+      traefik.http.routers.quando-plausibleJs.service: quando-plausible
+      traefik.http.middlewares.quando-plausibleJsReplacement.replacepath.path: "/js/plausible.js"
+      traefik.http.routers.quando-plausibleJs.middlewares: quando-plausibleJsReplacement
+    depends_on:
+      - plausible_db
+      - plausible_events_db
+    expose:
+      - 8000
+    env_file:
+      - plausible-conf.env
 
 volumes:
   db-data:
