@@ -1,5 +1,8 @@
 version: '3.8'
 
+include: 
+  - plausible/docker-compose.yaml
+
 services:
   server:
     build:
