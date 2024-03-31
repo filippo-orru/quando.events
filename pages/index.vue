@@ -74,25 +74,23 @@ onUnmounted(() => {
       </nav>
     </header>
     <div class="flex-grow">
-      <section class="w-screen min-h-[60vh] flex justify-center relative overflow-hidden">
+      <section class="w-screen min-h-[60vh] flex justify-center items-center relative overflow-hidden">
         <div id="landing-bg" class="absolute bg-gradient-to-r from-accent-light to-accent-light/30"></div>
-        <div class=" flex items-center">
-          <div
-            class="container max-w-screen-lg mx-auto mt-4 px-12 py-24 md:py-16 flex flex-col md:flex-row justify-between">
-            <div class="max-w-md mb-6">
-              <h2 class="text-5xl font-bold">Busy friends make scheduling hard</h2>
-              <p class="text-black/70 text-xl mt-4 mb-12">Find a time that fits everyone</p>
-              <NuxtLink :external="true" class="bg-gray-800 text-white px-4 py-4 rounded-full hover:bg-gray-700
+        <div
+          class="container max-w-screen-lg mx-auto mt-4 px-12 py-24 md:py-16 flex flex-col md:flex-row justify-between">
+          <div class="max-w-md mb-6">
+            <h2 class="text-5xl font-bold">Busy friends make scheduling hard</h2>
+            <p class="text-black/70 text-xl mt-4 mb-12">Find a time that fits everyone</p>
+            <NuxtLink :external="true" class="bg-gray-800 text-white px-4 py-4 rounded-full hover:bg-gray-700
             hover:ring-2 hover:ring-white transition-colors hover:shadow-xl" href="/meeting/new">
-                <font-awesome-icon icon="arrow-right" class="mr-2" /> Plan a meeting
-              </NuxtLink>
-              <!-- <p class="text-gray-600 mt-4 italic text-sm">It's free!</p> -->
-            </div>
-            <div class="flex justify-end">
-              <div class="max-h-36 md:max-h-48 max-w-[80%]">
-                <NuxtImg preload format="webp" src="/share-preview.jpg" alt=""
-                  class="rounded-full m-auto mr-0 translate-x-5 md:translate-x-0 max-h-[100%] shadow-2xl" />
-              </div>
+              <font-awesome-icon icon="arrow-right" class="mr-2" /> Plan a meeting
+            </NuxtLink>
+            <!-- <p class="text-gray-600 mt-4 italic text-sm">It's free!</p> -->
+          </div>
+          <div class="flex justify-end">
+            <div class="max-h-36 md:max-h-48 max-w-[80%]">
+              <NuxtImg preload format="webp" src="/share-preview.jpg" alt="" width="716" height="512"
+                class="rounded-full m-auto mr-0 translate-x-5 md:translate-x-0 w-auto max-h-[100%] shadow-2xl" />
             </div>
           </div>
         </div>
@@ -165,7 +163,7 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <NuxtImg format="webp" src="/screenshot.png"
+            <NuxtImg format="webp" src="/screenshot.png" width="974" height="1720"
               alt="Screenshot of the 'quando.events' meeting calendar interface. Multiple time ranges are selected."
               class="mt-6 w-96 border-2 shadow-xl rounded-lg mx-auto lg:mx-0" />
           </div>
