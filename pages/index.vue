@@ -48,7 +48,7 @@ onUnmounted(() => {
             </div>
             <div class="flex justify-end">
               <div class="max-h-36 md:max-h-48 max-w-[80%]">
-                <img src="/share-preview.jpg"
+                <NuxtImg preload format="webp" src="/share-preview.jpg"
                   class="rounded-full m-auto mr-0 translate-x-5 md:translate-x-0 max-h-[100%] shadow-2xl" />
               </div>
             </div>
@@ -123,7 +123,7 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <img src="/screenshot.png" class="mt-6 w-96 border-2 shadow-xl rounded-lg mx-auto lg:mx-0" />
+            <NuxtImg format="webp" src="/screenshot.png" class="mt-6 w-96 border-2 shadow-xl rounded-lg mx-auto lg:mx-0" />
           </div>
         </section>
         <section class="container">
