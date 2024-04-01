@@ -23,7 +23,7 @@ function isSet(name: string | null) {
 
 <template>
 
-  <SimpleDialog :title="userIsMeetingCreator ? 'Join this meeting' : 'What\'s your name?'"
+  <SimpleDialog :title="userIsMeetingCreator ? 'What\'s your name?' : 'Join this meeting'"
     :is-open="!isSet(userStore.name)">
     <div class="text-gray-800">
       <div class="flex mt-4">
@@ -50,13 +50,11 @@ function isSet(name: string | null) {
     <div class="mt-4 float-right">
       <button type="button" :disabled="!isSet(nameValue)" class="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-accent text-accent-800
         hover:bg-accent-dark
-        disabled:opacity-50 disabled:cursor-not-allowed"
-        @click="userStore.setName(nameValue)">
+        disabled:opacity-50 disabled:cursor-not-allowed" @click="userStore.setName(nameValue)">
         {{ userIsMeetingCreator ? 'Join' : 'Done' }}
       </button>
     </div>
   </SimpleDialog>
 </template>
 
-<style>
-</style>
+<style></style>

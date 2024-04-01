@@ -4,13 +4,9 @@ import { getOverlappingDaysInIntervals } from "date-fns/getOverlappingDaysInInte
 import { startOfDay } from "date-fns/startOfDay";
 import { type CalendarTimeslot } from '~/data/Meeting';
 
+useQuandoHead();
 useHead({
-  title: "quando.events",
   meta: [
-    {
-      name: "description",
-      content: "Schedule a new meeting with quando.events"
-    },
     {
       name: "viewport",
       content: "width=device-width, initial-scale=1.0, maximum-scale=1.0"
@@ -669,7 +665,8 @@ const fullDayEvents = computed(() => importedEvents.getFullDayEventsWithOffset(c
                     v-for=" event  in  fullDayEvents "
                     :style="{ 'top': (event.offset * 32) + 'px', 'left': eventToPercentOfCurrentRange({ start: currentRangeStart, end: event.start }) + '%' }"
                     :key="event.start.toString()">
-                    <div class="bg-secondary/80 rounded-md whitespace-nowrap py-1 px-3 h-full overflow-hidden flex items-center"
+                    <div
+                      class="bg-secondary/80 rounded-md whitespace-nowrap py-1 px-3 h-full overflow-hidden flex items-center"
                       :style="{ 'width': 'calc(' + eventToPercentOfCurrentRange(event) + '% - 8px)' }">
                       {{ event.start < currentRange.start ? '<' : '' }} {{ event.title }} {{ event.end > currentRange.end
                   ? '>' : '' }}
