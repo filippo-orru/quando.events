@@ -51,7 +51,6 @@ Funny enough, the hardest part wasn't building the rather complicated calendar U
 > To try it out, head over to [www.quando.events](https://www.quando.events) now, and schedule a meeting with friends.
 
 # More
-- Read [how I redesigned this website](https://filippo-orru.com/blog/giving-my-blog-a-facelift).
 - Learn more [about me](https://filippo-orru.com/about-me).
-- Check out [my other posts](https://filippo-orru.com/blog/).
+- Check out [my other blog posts](https://filippo-orru.com/blog/).
 - Find me on [LinkedIn](https://linkedin.com/in/filippo-orru).
