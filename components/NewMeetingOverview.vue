@@ -783,8 +783,8 @@ const fullDayEvents = computed(() => importedEvents.getFullDayEventsWithOffset(c
                       :class="{
                   'highlighted': highlightedTimeslot === slot,
                   'bg-accent-light shadow-lg': draggingTimeslotPosition?.slot === slot && (draggingTimeslotPosition.which === 'both' ? longPressing : true)
-                }
-                  " :style="{
+                }"
+                      :style="{
                   '-webkit-touch-callout': 'none', top: getTimeslotTop(slot) + '%', height: 'calc('
                     + getTimeslotHeight(slot) * 100 + '% - 1px)',
                 }
