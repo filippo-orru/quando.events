@@ -50,7 +50,7 @@ onUnmounted(() => {
           <div class="flex justify-end">
             <div class="max-h-36 md:max-h-48 max-w-[80%]">
               <NuxtImg preload format="webp" src="/share-preview.jpg" alt="" width="716" height="512"
-                class="rounded-full m-auto mr-0 translate-x-5 md:translate-x-0 w-auto max-h-[100%] shadow-2xl" />
+                class="rounded-full ml-auto mr-0 mt-6 translate-x-5 md:translate-x-0 w-auto max-h-[100%] shadow-2xl" />
             </div>
           </div>
         </div>
@@ -161,10 +161,16 @@ onUnmounted(() => {
               </p>
             </div>
             <div class="">
+              <h3 class="text-xl font-bold">Is this open source?</h3>
+              <p class="text-gray-600 mt-2"><font-awesome-icon icon="arrow-right" class="mr-2" />
+                Yes, you can view the project's source on Github: <a href="https://github.com/filippo-orru/quando.events" class="underline">github.com/filippo-orru/quando.events</a>
+              </p>
+            </div>
+            <div class="">
               <h3 class="text-xl font-bold">How can I get in contact?</h3>
               <p class="text-gray-600 mt-2"><font-awesome-icon icon="arrow-right" class="mr-2" />
                 You can reach me at <a href="mailto:hello@quando.events"
-                  class="text-accent-800 font-bold">hello@quando.events</a>
+                  class="text-accent-800 underline">hello@quando.events</a>
               </p>
             </div>
           </div>
