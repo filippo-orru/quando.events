@@ -18,7 +18,7 @@ export default defineNuxtConfig({
       },
       script: [
         // Plausible Analytics
-        { defer: true, 'data-domain': 'quando.events', src: 'https://stats.quando.events/psb.js' },
+        { defer: true, 'data-domain': 'quando.events', src: 'https://statistics.filippo-orru.com/psb.js' },
       ],
     },
   },
