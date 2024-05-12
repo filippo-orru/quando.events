@@ -23,9 +23,9 @@ services:
         hard: 262144
 
   plausible:
-    image: plausible/analytics:v2.0
+    image: ghcr.io/plausible/community-edition:v2.1.0-rc.1
     restart: always
-    command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    command: sh -c "sleep 2 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
     labels:
       traefik.enable: "true"
       traefik.http.services.quando-plausible.loadbalancer.server.port: 8000
