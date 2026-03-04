@@ -1,5 +1,5 @@
 import { MeetingSerialized } from "~/data/Meeting";
-import { MeetingWsMessageC, MeetingWsMessageS } from "~/stores/NewMeetingStore";
+import { MeetingWsMessageC, MeetingWsMessageS } from "~/stores/newMeetingStore";
 
 type WsClient = {
     userId: string;

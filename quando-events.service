@@ -1,5 +1,5 @@
 [Unit]
-Description="quando.events"
+Description="quando events"
 After=docker.service
 Requires=docker.service
 

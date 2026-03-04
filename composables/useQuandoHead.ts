@@ -1,26 +1,26 @@
 export function useQuandoHead() {
     useHead({
-        title: 'quando.events - Plan meetings with friends',
+        title: 'quando events - Plan meetings with friends',
         meta: [
             {
                 name: 'description',
-                content: 'quando.events helps you find a time that fits everyone. Sync your calendar, share the link, and meet in the overlap.'
+                content: 'quando events helps you find a time that fits everyone. Sync your calendar, share the link, and meet in the overlap.'
             },
             {
                 name: 'og:title',
-                content: 'quando.events - Plan meetings with friends'
+                content: 'quando events - Plan meetings with friends'
             },
             {
                 name: 'og:description',
-                content: 'quando.events helps you find a time that fits everyone. Sync your calendar, share the link, and meet in the overlap.'
+                content: 'quando events helps you find a time that fits everyone. Sync your calendar, share the link, and meet in the overlap.'
             },
             {
                 name: 'og:image',
-                content: 'https://quando.events/share-preview.jpg'
+                content: 'https://quando.filippo-orru.com/share-preview.jpg'
             },
             {
                 name: 'og:url',
-                content: 'https://quando.events'
+                content: 'https://quando.filippo-orru.com'
             },
             {
                 name: 'twitter:card',
@@ -28,15 +28,15 @@ export function useQuandoHead() {
             },
             {
                 name: 'twitter:title',
-                content: 'quando.events - Plan meetings with friends'
+                content: 'quando events - Plan meetings with friends'
             },
             {
                 name: 'twitter:description',
-                content: 'quando.events helps you find a time that fits everyone. Sync your calendar, share the link, and meet in the overlap.'
+                content: 'quando events helps you find a time that fits everyone. Sync your calendar, share the link, and meet in the overlap.'
             },
             {
                 name: 'twitter:image',
-                content: 'https://quando.events/share-preview.jpg'
+                content: 'https://quando.filippo-orru.com/share-preview.jpg'
             },
         ]
     })

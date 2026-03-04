@@ -574,7 +574,7 @@ const fullDayEvents = computed(() => importedEvents.getFullDayEventsWithOffset(c
     <div
       class="flex-shrink-0 bg-accent-light flex items-center justify-start gap-4 py-4 px-4 text-accent-800 shadow-sm z-20">
       <a href="/" class="ml-4 hover:underline font-bold flex gap-3 items-center">
-        quando.events
+        quando events
       </a>
       <div>
       </div>

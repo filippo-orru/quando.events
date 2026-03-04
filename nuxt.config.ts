@@ -44,7 +44,7 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt', '@pinia-plugin-persistedstate/nuxt', "@nuxt/image"],
   runtimeConfig: {
     redis: {
-      host: process.env.REDIS_HOST,
+      host: "localhost",
     },
     public: {
       googleInfo: {

@@ -1,11 +1,11 @@
-# quando.events
+# quando events
 
-Busy Friends Make Scheduling Hard ... but quando.events makes it easy!
+Busy Friends Make Scheduling Hard ... but quando events makes it easy!
 Ever tried planning an activity with three or more busy friends? You know how hard it can be. It inevitably takes a dozen messages going back and forth, trying to find out where your schedules align.
 
-**That’s why I created [www.quando.events](https://www.quando.events/), a simple & free website that makes it easy to schedule meetings with friends.**
+**That’s why I created [ quandoevents](https://quando.filippo-orru.com/), a simple & free website that makes it easy to schedule meetings with friends.**
 
-![Screenshot of the quando.events calendar view](readme/screenshot-1-arrows.jpg)
+![Screenshot of the quando events calendar view](readme/screenshot-1-arrows.jpg)
 
 How it works:
 
@@ -14,7 +14,7 @@ How it works:
 3. Share the link with your friends
 4. Meet in the overlap
 
-Try it out now: [Create a new meeting](https://www.quando.events).
+Try it out now: [Create a new meeting](https://quando.filippo-orru.com).
 
 If you want to read about the concept and background, [read my blog post](https://filippo-orru.com/blog/busy-friends-make-scheduling-hard/).
 
@@ -33,7 +33,7 @@ Stack:
     - Database: [Redis](https://redis.io/) as a simple key-value store for the meeting data.
     - [Plausible Analytics](https://plausible.io/) because it's privacy-friendly and can be self-hosted
 - DevOps
-    - [Hetzner](https://www.hetzner.com/cloud/) for my cheap VPS. It powers all my services, including this website, *quando.events*, my [Four in a Row](https://filippo-orru.com/blog/four-in-a-row) game, and more.
+    - [Hetzner](https://www.hetzner.com/cloud/) for my cheap VPS. It powers all my services, including this website, *quando events*, my [Four in a Row](https://filippo-orru.com/blog/four-in-a-row) game, and more.
     - [Traefik](https://traefik.io/traefik/) to proxy requests to the service.
     - [Docker Compose](https://docs.docker.com/compose/) to easily build and deploy the bundled Nuxt app, Redis, and Plausible.
 
@@ -48,7 +48,7 @@ Vue offers a lot of useful built-in components, like [transitions](vuejs.org/gui
 # Challenges
 Funny enough, the hardest part wasn't building the rather complicated calendar UI. Instead, it was getting Google's approval for the 'import events' functionality. There are lots of rules to follow. Some are obvious (add a privacy policy), and some aren't (make sure to show the 'AppId' in the browser's URL bar in your demo video).
 
-> To try it out, head over to [www.quando.events](https://www.quando.events) now, and schedule a meeting with friends.
+> To try it out, head over to [quando.filippo-orru.com](https://quando.filippo-orru.com) now, and schedule a meeting with friends.
 
 # More
 - Learn more [about me](https://filippo-orru.com/about-me).

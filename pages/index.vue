@@ -24,7 +24,7 @@ onUnmounted(() => {
   <div class="min-h-screen flex flex-col">
     <header class="py-6 fixed left-0 right-0 top-0 text-accent-800 font-bold z-10 transition-colors" ref="header">
       <nav class="container max-w-screen-lg mx-auto flex px-12 items-center gap-8 tracking-wide">
-        <NuxtLink to="/" class="decoration-2 hover:underline">quando.events</NuxtLink>
+        <NuxtLink to="/" class="decoration-2 hover:underline">quando events</NuxtLink>
         <div class="ml-auto flex gap-8">
           <NuxtLink :external="true" to="/meeting/new" class="hidden md:block ml-auto decoration-2 hover:underline">new
             meeting
@@ -124,7 +124,7 @@ onUnmounted(() => {
 
           <div>
             <NuxtImg format="webp" src="/screenshot.png" width="974" height="1720"
-              alt="Screenshot of the 'quando.events' meeting calendar interface. Multiple time ranges are selected."
+              alt="Screenshot of the 'quando events' meeting calendar interface. Multiple time ranges are selected."
               class="mt-6 w-96 border-2 shadow-xl rounded-lg mx-auto lg:mx-0" />
           </div>
         </section>
@@ -138,7 +138,7 @@ onUnmounted(() => {
             <div class="">
               <h3 class="text-xl font-bold">Do I need to download anything?</h3>
               <p class="text-gray-600 mt-2"><font-awesome-icon icon="arrow-right" class="mr-2" />
-                Nope, quando.events works right in your browser. No downloads or installations required.
+                Nope, quando events works right in your browser. No downloads or installations required.
               </p>
             </div>
             <div class="">
@@ -169,8 +169,8 @@ onUnmounted(() => {
             <div class="">
               <h3 class="text-xl font-bold">How can I get in contact?</h3>
               <p class="text-gray-600 mt-2"><font-awesome-icon icon="arrow-right" class="mr-2" />
-                You can reach me at <a href="mailto:hello@quando.events"
-                  class="text-accent-800 underline">hello@quando.events</a>
+                You can reach me at <a href="mailto:hello@filippo-orru.com"
+                  class="text-accent-800 underline">hello@filippo-orru.com</a>
               </p>
             </div>
           </div>
