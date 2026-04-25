@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile
     expose:
       - 3000
+    restart: unless-stoppeddepends_on:
+      redis:
+        condition: service_started
     environment:
       - NODE_ENV=production
       - PORT=3000
