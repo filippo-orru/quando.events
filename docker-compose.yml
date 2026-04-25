@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile
     expose:
       - 3000
-    restart: unless-stoppeddepends_on:
+    restart: unless-stopped
+    depends_on:
       redis:
         condition: service_started
     environment:
