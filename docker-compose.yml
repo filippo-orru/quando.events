@@ -19,6 +19,8 @@ services:
       traefik.http.routers.meetme.entrypoints: "https"
       traefik.http.routers.meetme.tls: "true"
       traefik.http.services.meetme.loadbalancer.server.port: "3000"
+      kuma.quandoevents.http.name: "Quando Events"
+      kuma.quandoevents.http.url: "https://quando.filippo-orru.com"
     networks:
       - default
       - traefik
